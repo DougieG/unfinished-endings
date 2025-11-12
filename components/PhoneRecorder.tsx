@@ -18,15 +18,22 @@ export function PhoneRecorder() {
       
       setStoryId(id);
       
-      // Show success message
-      alert(`Story recorded! Duration: ${duration}s\nStory ID: ${id}`);
-      
     } catch (error) {
       console.error('Error uploading recording:', error);
       alert('Error saving recording. Please try again.');
     } finally {
       setUploading(false);
     }
+  };
+
+  const viewStory = () => {
+    if (storyId) {
+      window.open(`/story/${storyId}`, '_blank');
+    }
+  };
+
+  const closeNotification = () => {
+    setStoryId(null);
   };
 
   const handlePlaybackStart = () => {
@@ -50,8 +57,30 @@ export function PhoneRecorder() {
       )}
       
       {storyId && !uploading && (
-        <div className="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
-          ✓ Story saved! ID: {storyId}
+        <div className="fixed bottom-8 right-8 bg-white rounded-lg shadow-2xl p-6 max-w-md border-2 border-green-500">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">✓</div>
+            <div className="flex-1">
+              <h3 className="text-lg font-serif text-soot mb-2">Story Saved!</h3>
+              <p className="text-sm text-soot/70 mb-4">
+                Your story is being processed. Shadow puppet will be ready in ~1 minute.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={viewStory}
+                  className="px-4 py-2 bg-teal text-white rounded hover:bg-teal/90 transition-colors text-sm font-medium"
+                >
+                  View Story →
+                </button>
+                <button
+                  onClick={closeNotification}
+                  className="px-4 py-2 bg-soot/10 text-soot rounded hover:bg-soot/20 transition-colors text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
