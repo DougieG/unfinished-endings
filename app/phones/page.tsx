@@ -1,4 +1,4 @@
-import { PhoneControls } from '@/components/PhoneControls';
+import { PhoneRecorder } from '@/components/PhoneRecorder';
 
 export default function PhonesPage() {
   return (
@@ -13,7 +13,7 @@ export default function PhonesPage() {
           </p>
         </header>
 
-        <PhoneControls />
+        <PhoneRecorder />
         
         <footer className="mt-12 text-center text-sm text-soot/50">
           <p>A living archive of loss and memory</p>
