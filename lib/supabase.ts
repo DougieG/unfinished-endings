@@ -29,6 +29,7 @@ export type Story = {
   transcript: string | null;
   keywords: string[] | null;
   visual_url: string | null;
+  panorama: any | null; // CrankiePanorama with scenes array
   consent: boolean;
   play_count: number;
   last_played_at: string | null;

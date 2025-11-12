@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ShadowPuppet from '@/components/ShadowPuppet';
+import CrankiePlayer from '@/components/CrankiePlayer';
 import { keywordsToMotifs } from '@/lib/keywords';
 import type { Story } from '@/lib/supabase';
 
@@ -29,34 +30,48 @@ export default function StoryPlayer({ story }: StoryPlayerProps) {
       transition={{ duration: 0.6 }}
       className="bg-white/50 rounded-lg p-8 shadow-2xl"
     >
-      {/* Shadow Visual */}
-      <div className="aspect-[4/3] mb-6 bg-cardboard/30 rounded overflow-hidden">
-        {story.visual_url ? (
-          /* AI-generated shadow puppet image */
-          <img 
-            src={story.visual_url} 
-            alt="Shadow puppet visual" 
-            className="w-full h-full object-cover"
+      {/* Shadow Visual / Crankie */}
+      {story.panorama ? (
+        /* Crankie panorama with synced audio */
+        <div className="mb-6">
+          <CrankiePlayer 
+            panorama={story.panorama}
+            audioUrl={story.audio_url}
+            autoPlay={false}
           />
-        ) : (
-          /* Fallback to canvas animation */
-          <ShadowPuppet 
-            keywords={story.keywords || []}
-            motifs={motifs}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* Static visual */}
+          <div className="aspect-[4/3] mb-6 bg-cardboard/30 rounded overflow-hidden">
+            {story.visual_url ? (
+              /* AI-generated shadow puppet image */
+              <img 
+                src={story.visual_url} 
+                alt="Shadow puppet visual" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              /* Fallback to canvas animation */
+              <ShadowPuppet 
+                keywords={story.keywords || []}
+                motifs={motifs}
+              />
+            )}
+          </div>
 
-      {/* Audio Player */}
-      <div className="mb-6">
-        <audio 
-          controls 
-          className="w-full"
-          src={story.audio_url}
-        >
-          Your browser does not support audio playback.
-        </audio>
-      </div>
+          {/* Audio Player */}
+          <div className="mb-6">
+            <audio 
+              controls 
+              className="w-full"
+              src={story.audio_url}
+            >
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+        </>
+      )}
 
       {/* Transcript */}
       {story.transcript && (

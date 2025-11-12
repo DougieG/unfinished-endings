@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { extractKeywordsWithAI } from '@/lib/keywords';
-import { generateShadowPuppet } from '@/lib/visual-generator';
+import { generateCrankiePanorama } from '@/lib/crankie-generator';
 import { OpenAI } from 'openai';
 
 export async function POST(
@@ -64,40 +64,34 @@ export async function POST(
       process.env.OPENAI_API_KEY
     );
 
-    // Generate shadow puppet visual using Stable Diffusion
-    let visualUrl: string | null = null;
+    // Generate crankie panorama (multi-frame sequence)
+    let panorama: any = null;
     try {
       if (process.env.REPLICATE_API_TOKEN) {
-        console.log('🎨 Generating shadow puppet visual...');
-        // Create a simple analysis object from keywords
-        const analysis = {
-          objects_mentioned: keywords.slice(0, 3).map(k => ({ 
-            object: k,
-            category: 'object' as const,
-            frequency: 1,
-            context: []
-          })),
-          sentiment_score: 0, // Neutral default
-        };
-        visualUrl = await generateShadowPuppet(analysis);
-        if (visualUrl) {
-          console.log('✅ Visual generated:', visualUrl);
+        console.log('🎨 Generating crankie panorama (5-7 scenes)...');
+        panorama = await generateCrankiePanorama(
+          id,
+          transcript,
+          story.duration_s || 165
+        );
+        if (panorama) {
+          console.log(`✅ Crankie panorama generated: ${panorama.scenes.length} scenes`);
         }
       } else {
         console.log('⚠️ Replicate API token not configured, skipping visual generation');
       }
     } catch (visualError) {
-      console.error('⚠️ Visual generation failed (continuing anyway):', visualError);
+      console.error('⚠️ Crankie generation failed (continuing anyway):', visualError);
       // Don't fail the whole process if visual generation fails
     }
 
-    // Update story with transcript, keywords, and visual
+    // Update story with transcript, keywords, and panorama
     const { error: updateError } = await supabase
       .from('stories')
       .update({
         transcript,
         keywords,
-        visual_url: visualUrl,
+        panorama,
       })
       .eq('id', id);
 
@@ -113,7 +107,7 @@ export async function POST(
       success: true,
       transcript,
       keywords,
-      visual_url: visualUrl,
+      panorama,
     });
 
   } catch (error) {
