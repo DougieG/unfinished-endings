@@ -75,9 +75,29 @@ export function PhoneControls({ onRecordingComplete, onPlaybackStart }: PhoneCon
       if (response.ok) {
         const story = await response.json();
         
+        if (!story.audio_url) {
+          console.error('Story has no audio URL:', story);
+          alert('Story has no audio file');
+          setPhone2Active(false);
+          return;
+        }
+        
+        console.log('Playing story:', story.id, story.audio_url);
+        
         // Play audio
         const audio = new Audio(story.audio_url);
-        audio.play();
+        
+        audio.onerror = (e) => {
+          console.error('Audio playback error:', e);
+          alert('Failed to play audio file');
+          setPhone2Active(false);
+        };
+        
+        audio.play().catch(err => {
+          console.error('Play failed:', err);
+          alert('Failed to start playback');
+          setPhone2Active(false);
+        });
         
         // Auto-hangup when finished
         audio.onended = () => {
@@ -85,11 +105,14 @@ export function PhoneControls({ onRecordingComplete, onPlaybackStart }: PhoneCon
         };
         
       } else {
-        alert('No stories available to play');
+        const errorData = await response.text();
+        console.error('Random story fetch failed:', errorData);
+        alert('No stories available to play. Make sure at least one story has consent enabled in admin.');
         setPhone2Active(false);
       }
     } catch (error) {
       console.error('Error playing story:', error);
+      alert('Error loading story');
       setPhone2Active(false);
     }
   };
