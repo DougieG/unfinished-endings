@@ -31,10 +31,20 @@ export default function StoryPlayer({ story }: StoryPlayerProps) {
     >
       {/* Shadow Visual */}
       <div className="aspect-[4/3] mb-6 bg-cardboard/30 rounded overflow-hidden">
-        <ShadowPuppet 
-          keywords={story.keywords || []}
-          motifs={motifs}
-        />
+        {story.visual_url ? (
+          /* AI-generated shadow puppet image */
+          <img 
+            src={story.visual_url} 
+            alt="Shadow puppet visual" 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          /* Fallback to canvas animation */
+          <ShadowPuppet 
+            keywords={story.keywords || []}
+            motifs={motifs}
+          />
+        )}
       </div>
 
       {/* Audio Player */}
