@@ -71,6 +71,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Trigger transcription in the background (don't wait for it)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    fetch(`${appUrl}/api/transcribe/${story.id}`, {
+      method: 'POST',
+    }).catch(err => {
+      console.error('Background transcription trigger failed:', err);
+    });
+
     return NextResponse.json({
       id: story.id,
       audio_url: story.audio_url,
