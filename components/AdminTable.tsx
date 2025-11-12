@@ -119,7 +119,16 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
             {filteredStories.map((story) => (
               <tr key={story.id} className="border-b border-soot/10 hover:bg-cardboard/30">
                 <td className="p-3 font-mono text-xs">
-                  {story.id.substring(0, 8)}...
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(story.id);
+                      alert('Story ID copied!');
+                    }}
+                    className="text-left hover:text-teal hover:underline cursor-pointer"
+                    title="Click to copy full ID"
+                  >
+                    {story.id.substring(0, 8)}...
+                  </button>
                 </td>
                 <td className="p-3">
                   {new Date(story.created_at).toLocaleDateString()}
