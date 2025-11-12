@@ -8,6 +8,9 @@ interface StoryPageProps {
   };
 }
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function StoryPage({ params }: StoryPageProps) {
   const { id } = params;
   const supabase = getServiceSupabase();
@@ -23,6 +26,13 @@ export default async function StoryPage({ params }: StoryPageProps) {
     notFound();
   }
 
+  // Debug logging
+  console.log('Story data:', {
+    id: story.id,
+    hasPanorama: !!story.panorama,
+    panoramaScenes: story.panorama?.scenes?.length || 0
+  });
+
   return (
     <div className="min-h-screen bg-cardboard flex items-center justify-center p-8">
       <div className="max-w-2xl w-full">
@@ -32,6 +42,9 @@ export default async function StoryPage({ params }: StoryPageProps) {
           </h1>
           <p className="text-sm font-sans text-soot/60">
             Tale #{story.id.substring(0, 8).toUpperCase()}
+            {story.panorama && (
+              <span className="ml-2 text-amber">🎭 Crankie Theater</span>
+            )}
           </p>
         </div>
 

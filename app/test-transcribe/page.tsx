@@ -23,7 +23,7 @@ export default function TestTranscribePage() {
       if (response.ok) {
         setResult(data);
       } else {
-        setError(JSON.stringify(data, null, 2));
+        setError(`Status: ${response.status}\n\n${JSON.stringify(data, null, 2)}`);
       }
     } catch (err: any) {
       setError(err.message);
