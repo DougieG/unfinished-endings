@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
     
     // Fetch all consented stories with valid audio
-    // Only include stories from 'upload' source (actual recordings)
+    // Exclude preload/seed stories that don't have real audio files
     const { data: stories, error } = await supabase
       .from('stories')
       .select('*')
       .eq('consent', true)
-      .eq('source', 'upload')
+      .neq('source', 'preload')
       .not('audio_url', 'is', null)
       .order('created_at', { ascending: false });
 
@@ -25,9 +25,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('Found stories for playback:', stories.length);
+    stories.forEach(s => {
+      console.log(`  - ${s.id.substring(0, 8)}: source=${s.source}, consent=${s.consent}, audio=${!!s.audio_url}`);
+    });
+
     if (!stories || stories.length === 0) {
       return NextResponse.json(
-        { error: 'No stories available' },
+        { error: 'No stories available for playback. Record a story first!' },
         { status: 404 }
       );
     }
