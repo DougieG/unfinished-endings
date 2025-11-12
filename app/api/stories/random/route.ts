@@ -7,11 +7,14 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getServiceSupabase();
     
-    // Fetch all consented stories
+    // Fetch all consented stories with valid audio
+    // Only include stories from 'upload' source (actual recordings)
     const { data: stories, error } = await supabase
       .from('stories')
       .select('*')
       .eq('consent', true)
+      .eq('source', 'upload')
+      .not('audio_url', 'is', null)
       .order('created_at', { ascending: false });
 
     if (error) {
