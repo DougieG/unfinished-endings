@@ -1,0 +1,92 @@
+PHONE WIRING DIAGRAM
+====================
+
+RJ11 Cable Pinout (looking at connector, tab facing down):
+----------------------------------------------------------
+
+    ┌─────────────┐
+    │  1 2 3 4 5 6│ ← Pin numbers
+    │  │ │ │ │ │ │
+    │  Y B R G Y B│ ← Wire colors
+    └──────▼──────┘
+         Tab
+
+
+Pin 1: Yellow - Not used
+Pin 2: Black  - Tip (audio)
+Pin 3: Red    - Ring (audio)
+Pin 4: Green  - HOOK SWITCH ← USE THIS
+Pin 5: Yellow - GROUND ← USE THIS
+Pin 6: Blue   - Not used
+
+
+Arduino Nano 33 IoT Connections:
+---------------------------------
+
+         Phone 1              Phone 2
+    
+    Green (hook) ──┐      ┌── Green (hook)
+                   │      │
+                   ↓      ↓
+              ┌────────────────┐
+              │  Arduino Nano  │
+              │    33 IoT      │
+              │                │
+    Pin 2  ←──┤ D2         D3  ├──→  Pin 3
+              │                │
+    GND    ←──┤ GND        GND ├──→  GND
+              │                │
+              │  [USB]         │
+              └────┬───────────┘
+                   │
+                   ↓
+              To Computer
+
+
+Breadboard Layout:
+------------------
+
+    Phone 1          Arduino          Phone 2
+    Green  ─────→  Pin 2
+    Yellow ─────→  GND  ←──────  Yellow
+                     Pin 3  ←─────  Green
+
+
+Hook Switch Behavior:
+---------------------
+
+ON-HOOK (phone hung up):
+  - Hook switch OPEN
+  - Pin reads HIGH (due to pull-up)
+  - No recording/playback
+
+OFF-HOOK (phone picked up):
+  - Hook switch CLOSED
+  - Pin reads LOW (connected to ground)
+  - Start recording/playback
+
+
+Testing with Multimeter:
+------------------------
+
+1. Set multimeter to continuity mode (beep)
+2. Touch probes to:
+   - Pin 4 (green wire)
+   - Pin 5 (yellow wire)
+3. Phone ON-HOOK: No beep (open circuit)
+4. Phone OFF-HOOK: BEEP! (closed circuit)
+
+
+Troubleshooting:
+----------------
+
+No hook detection?
+→ Check green wire to correct pin (2 or 3)
+→ Check yellow wire to GND
+→ Test continuity with multimeter
+→ Try different phone (hook might be broken)
+
+False triggers?
+→ Add debounce (already in code)
+→ Check for loose connections
+→ Wrap exposed wires with electrical tape
