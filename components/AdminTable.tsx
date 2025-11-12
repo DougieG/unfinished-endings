@@ -187,6 +187,14 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                 </td>
                 <td className="p-3">
                   <div className="flex space-x-2">
+                    <a
+                      href={`/story/${story.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal hover:underline text-xs font-medium"
+                    >
+                      View
+                    </a>
                     <button
                       onClick={() => playAudio(story.audio_url)}
                       className="text-amber hover:underline text-xs"
