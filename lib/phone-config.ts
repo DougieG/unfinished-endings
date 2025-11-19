@@ -3,9 +3,9 @@
 
 export const PHONE_CONFIG = {
   // Audio device names (partial match)
-  // Tested: Native Union POP Phone on iPad 1
+  // Both iPads use Native Union POP Phone
   phone1DeviceName: 'Native Union POP Phone', // Recording phone
-  phone2DeviceName: 'USB Audio Device', // Playback phone (update after testing iPad 2)
+  phone2DeviceName: 'Native Union POP Phone', // Playback phone
 
   // Key codes for Recording Station (Phone 1)
   // Tested: KeyC from first device
@@ -18,9 +18,10 @@ export const PHONE_CONFIG = {
   },
 
   // Key codes for Playback Station (Phone 2)
+  // Same hardware = same key codes
   playback: {
-    offHook: ['KeyP', 'Digit3'], // Keys that trigger "pickup"
-    onHook: ['KeyO', 'Digit4'],  // Keys that trigger "hangup"
+    offHook: ['KeyC'], // Keys that trigger "pickup" (button released)
+    onHook: ['KeyC'],  // Keys that trigger "hangup" (button pressed)
     // Optional navigation
     next: ['ArrowRight', 'KeyN'],
     repeat: ['ArrowLeft', 'KeyR'],
