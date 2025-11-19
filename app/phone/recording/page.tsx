@@ -207,8 +207,8 @@ export default function RecordingStation() {
         formData.append('sessionId', sessionId.current);
       }
 
-      // Upload to endpoint
-      await fetch('/api/phone/record/stop', {
+      // Upload to unified stories endpoint (triggers transcription pipeline)
+      await fetch('/api/stories', {
         method: 'POST',
         body: formData,
       });
