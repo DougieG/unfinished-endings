@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         audio_url: story.audio_url,
         duration_s: story.duration_s,
         keywords: story.keywords,
+        panorama: story.panorama, // Include shadow puppet data
       },
     });
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { PhoneAudioManager } from '@/lib/phone-audio';
 import { PHONE_CONFIG } from '@/lib/phone-config';
+import CrankiePlayer from '@/components/CrankiePlayer';
 
 type StationState = 'idle' | 'loading' | 'playing' | 'error';
 
@@ -215,8 +216,20 @@ export default function PlaybackStation() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white p-8">
-      <div className="text-center space-y-8">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+      {/* Shadow puppet display */}
+      {state === 'playing' && currentStory?.panorama && (
+        <div className="fixed inset-0 z-10">
+          <CrankiePlayer 
+            panorama={currentStory.panorama}
+            audioUrl={currentStory.audio_url}
+            autoPlay={true}
+          />
+        </div>
+      )}
+
+      {/* Status overlay */}
+      <div className="relative z-20 text-center space-y-8 p-8">
         <h1 className="text-4xl font-bold tracking-wider uppercase text-gray-500">
           Playback Station
         </h1>
@@ -224,7 +237,7 @@ export default function PlaybackStation() {
         <div className="text-6xl font-mono">
           {state === 'idle' && <span className="text-gray-600">Pick up to listen</span>}
           {state === 'loading' && <span className="text-yellow-400 animate-pulse">Connecting...</span>}
-          {state === 'playing' && (
+          {state === 'playing' && !currentStory?.panorama && (
             <div className="space-y-4">
               <span className="text-green-500">Playing Story</span>
               {currentStory && (
