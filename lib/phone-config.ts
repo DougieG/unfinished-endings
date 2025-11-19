@@ -8,10 +8,10 @@ export const PHONE_CONFIG = {
   phone2DeviceName: 'USB Audio Device', // Playback phone
 
   // Key codes for Recording Station (Phone 1)
-  // Update these after checking /debug/keys with your hardware
+  // Tested: KeyC from first device
   recording: {
-    offHook: ['KeyR', 'Digit1'], // Keys that trigger "pickup"
-    onHook: ['KeyH', 'Digit2'],  // Keys that trigger "hangup"
+    offHook: ['KeyC'], // Keys that trigger "pickup" (button released)
+    onHook: ['KeyC'],  // Keys that trigger "hangup" (button pressed)
     // Optional extra buttons
     consentYes: ['KeyY'],
     consentNo: ['KeyN'],
