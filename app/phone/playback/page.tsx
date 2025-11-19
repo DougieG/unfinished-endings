@@ -70,6 +70,23 @@ export default function PlaybackStation() {
     };
   }, [state, currentStory]);
 
+  const playIntroMessage = (): Promise<void> => {
+    return new Promise((resolve) => {
+      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
+      
+      audio.onended = () => resolve();
+      audio.onerror = (err) => {
+        console.error('Intro message failed to play', err);
+        resolve(); // Continue anyway
+      };
+      
+      audio.play().catch(err => {
+        console.error('Audio play failed', err);
+        resolve(); // Continue anyway
+      });
+    });
+  };
+
   const startSession = async () => {
     try {
       setState('loading');
@@ -83,7 +100,10 @@ export default function PlaybackStation() {
       const data = await res.json();
       if (data.session) sessionId.current = data.session.sessionId;
 
-      // 2. Get story and play
+      // 2. Play intro message
+      await playIntroMessage();
+
+      // 3. Get story and play
       await playRandomStory();
 
     } catch (err) {
