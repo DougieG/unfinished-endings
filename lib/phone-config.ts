@@ -3,9 +3,9 @@
 
 export const PHONE_CONFIG = {
   // Audio device names (partial match)
-  // Update these after checking /debug/devices on the actual iPads
-  phone1DeviceName: 'USB Audio Device', // Recording phone
-  phone2DeviceName: 'USB Audio Device', // Playback phone
+  // Tested: Native Union POP Phone on iPad 1
+  phone1DeviceName: 'Native Union POP Phone', // Recording phone
+  phone2DeviceName: 'USB Audio Device', // Playback phone (update after testing iPad 2)
 
   // Key codes for Recording Station (Phone 1)
   // Tested: KeyC from first device
