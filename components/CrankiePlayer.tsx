@@ -23,12 +23,14 @@ interface CrankiePlayerProps {
   panorama: CrankiePanorama;
   audioUrl?: string;
   autoPlay?: boolean;
+  onEnded?: () => void;
 }
 
 export default function CrankiePlayer({ 
   panorama, 
   audioUrl,
-  autoPlay = false 
+  autoPlay = false,
+  onEnded
 }: CrankiePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -57,15 +59,21 @@ export default function CrankiePlayer({
       const updateTime = () => setCurrentTime(audio.currentTime);
       const handlePlay = () => setIsPlaying(true);
       const handlePause = () => setIsPlaying(false);
+      const handleEnded = () => {
+        setIsPlaying(false);
+        if (onEnded) onEnded();
+      };
 
       audio.addEventListener('timeupdate', updateTime);
       audio.addEventListener('play', handlePlay);
       audio.addEventListener('pause', handlePause);
+      audio.addEventListener('ended', handleEnded);
 
       return () => {
         audio.removeEventListener('timeupdate', updateTime);
         audio.removeEventListener('play', handlePlay);
         audio.removeEventListener('pause', handlePause);
+        audio.removeEventListener('ended', handleEnded);
       };
     }
     

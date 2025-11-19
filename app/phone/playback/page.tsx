@@ -164,25 +164,28 @@ export default function PlaybackStation() {
       setState('playing');
       
       console.log('Playing story:', data.story.audio_url);
+      console.log('Panorama data:', data.story.panorama);
       
-      // Use Audio element directly so we can detect when it ends
-      storyAudio.current = new Audio(data.story.audio_url);
-      
-      storyAudio.current.onended = async () => {
-        // Story finished naturally - play closing message
-        await playClosingMessage();
-        endSession();
-      };
-      
-      storyAudio.current.onerror = (err) => {
-        console.error('Story playback failed', err, storyAudio.current?.error);
-        setState('error');
-      };
-      
-      storyAudio.current.play().catch(err => {
-        console.error('Story play failed', err);
-        setState('error');
-      });
+      // ONLY play audio manually if there's NO panorama (CrankiePlayer handles it otherwise)
+      if (!data.story.panorama) {
+        storyAudio.current = new Audio(data.story.audio_url);
+        
+        storyAudio.current.onended = async () => {
+          await playClosingMessage();
+          endSession();
+        };
+        
+        storyAudio.current.onerror = (err) => {
+          console.error('Story playback failed', err, storyAudio.current?.error);
+          setState('error');
+        };
+        
+        storyAudio.current.play().catch(err => {
+          console.error('Story play failed', err);
+          setState('error');
+        });
+      }
+      // If panorama exists, CrankiePlayer will handle audio playback
       
     } catch (err) {
       console.error('Fetch story failed', err);
@@ -224,6 +227,10 @@ export default function PlaybackStation() {
             panorama={currentStory.panorama}
             audioUrl={currentStory.audio_url}
             autoPlay={true}
+            onEnded={async () => {
+              await playClosingMessage();
+              endSession();
+            }}
           />
         </div>
       )}
