@@ -85,6 +85,23 @@ export default function RecordingStation() {
     });
   };
 
+  const playClosingMessage = (): Promise<void> => {
+    return new Promise((resolve) => {
+      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/DoneRecording.mp3');
+      
+      audio.onended = () => resolve();
+      audio.onerror = (err) => {
+        console.error('Closing message failed to play', err);
+        resolve(); // Continue anyway
+      };
+      
+      audio.play().catch(err => {
+        console.error('Audio play failed', err);
+        resolve(); // Continue anyway
+      });
+    });
+  };
+
   const startSession = async () => {
     try {
       setState('intro');
@@ -195,6 +212,10 @@ export default function RecordingStation() {
         method: 'POST',
         body: formData,
       });
+
+      // Play closing message
+      setStatusMessage('Thank you!');
+      await playClosingMessage();
 
       resetToIdle();
     } catch (err) {
