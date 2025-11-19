@@ -68,6 +68,23 @@ export default function RecordingStation() {
     };
   }, [state]);
 
+  const playWelcomeMessage = (): Promise<void> => {
+    return new Promise((resolve) => {
+      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/Welcome2Record.mp3');
+      
+      audio.onended = () => resolve();
+      audio.onerror = (err) => {
+        console.error('Welcome message failed to play', err);
+        resolve(); // Continue anyway
+      };
+      
+      audio.play().catch(err => {
+        console.error('Audio play failed', err);
+        resolve(); // Continue anyway
+      });
+    });
+  };
+
   const startSession = async () => {
     try {
       setState('intro');
@@ -85,12 +102,18 @@ export default function RecordingStation() {
         sessionId.current = data.session.sessionId;
       }
 
-      // 2. Play beep/prompt
+      // 2. Play welcome message
+      setStatusMessage('Listen to instructions...');
+      await playWelcomeMessage();
+
+      // 3. Play beep to signal recording start
+      setStatusMessage('Get ready...');
       if (audioManager.current) {
         await audioManager.current.playBeep('recording');
       }
 
-      // 3. Start recording stream
+      // 4. Start recording stream
+      setStatusMessage('Recording now!');
       if (audioManager.current) {
         const stream = await audioManager.current.startRecording();
         startMediaRecorder(stream);
