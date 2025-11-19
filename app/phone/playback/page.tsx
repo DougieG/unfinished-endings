@@ -12,6 +12,7 @@ export default function PlaybackStation() {
   
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
+  const storyAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     audioManager.current = new PhoneAudioManager({
@@ -48,7 +49,10 @@ export default function PlaybackStation() {
       // NEXT STORY
       if (PHONE_CONFIG.playback.next && PHONE_CONFIG.playback.next.includes(e.code)) {
         if (state === 'playing') {
-          audioManager.current?.stopPlayback();
+          if (storyAudio.current) {
+            storyAudio.current.pause();
+            storyAudio.current = null;
+          }
           playRandomStory();
         }
       }
@@ -56,8 +60,11 @@ export default function PlaybackStation() {
       // REPEAT STORY
       if (PHONE_CONFIG.playback.repeat && PHONE_CONFIG.playback.repeat.includes(e.code)) {
         if (state === 'playing' && currentStory?.audio_url) {
-          audioManager.current?.stopPlayback();
-          audioManager.current?.startPlayback(currentStory.audio_url);
+          if (storyAudio.current) {
+            storyAudio.current.pause();
+            storyAudio.current.currentTime = 0;
+            storyAudio.current.play();
+          }
         }
       }
     };
@@ -77,6 +84,23 @@ export default function PlaybackStation() {
       audio.onended = () => resolve();
       audio.onerror = (err) => {
         console.error('Intro message failed to play', err);
+        resolve(); // Continue anyway
+      };
+      
+      audio.play().catch(err => {
+        console.error('Audio play failed', err);
+        resolve(); // Continue anyway
+      });
+    });
+  };
+
+  const playClosingMessage = (): Promise<void> => {
+    return new Promise((resolve) => {
+      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/3ThankyePlayback.mp3');
+      
+      audio.onended = () => resolve();
+      audio.onerror = (err) => {
+        console.error('Closing message failed to play', err);
         resolve(); // Continue anyway
       };
       
@@ -128,9 +152,24 @@ export default function PlaybackStation() {
         setCurrentStory(data.story);
         setState('playing');
         
-        if (audioManager.current) {
-          await audioManager.current.startPlayback(data.story.audio_url);
-        }
+        // Use Audio element directly so we can detect when it ends
+        storyAudio.current = new Audio(data.story.audio_url);
+        
+        storyAudio.current.onended = async () => {
+          // Story finished naturally - play closing message
+          await playClosingMessage();
+          endSession();
+        };
+        
+        storyAudio.current.onerror = (err) => {
+          console.error('Story playback failed', err);
+          setState('error');
+        };
+        
+        storyAudio.current.play().catch(err => {
+          console.error('Story play failed', err);
+          setState('error');
+        });
       }
     } catch (err) {
       console.error('Fetch story failed', err);
@@ -143,6 +182,10 @@ export default function PlaybackStation() {
     setCurrentStory(null);
     
     // Stop audio
+    if (storyAudio.current) {
+      storyAudio.current.pause();
+      storyAudio.current = null;
+    }
     audioManager.current?.stopPlayback();
 
     // Notify backend
