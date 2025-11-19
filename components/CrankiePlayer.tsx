@@ -24,13 +24,15 @@ interface CrankiePlayerProps {
   audioUrl?: string;
   autoPlay?: boolean;
   onEnded?: () => void;
+  hideControls?: boolean;
 }
 
 export default function CrankiePlayer({ 
   panorama, 
   audioUrl,
   autoPlay = false,
-  onEnded
+  onEnded,
+  hideControls = false
 }: CrankiePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -49,6 +51,20 @@ export default function CrankiePlayer({
     const nextScene = panorama.scenes[i + 1];
     return !nextScene || progress < nextScene.beat.timestamp_percent;
   }) || panorama.scenes[0];
+
+  // Handle autoPlay
+  useEffect(() => {
+    if (autoPlay) {
+      const audio = audioRef.current;
+      if (audio && audioUrl) {
+        // Play audio (which will trigger isPlaying state via event listener)
+        audio.play().catch(err => console.error('AutoPlay failed:', err));
+      } else {
+        // Start timer-based playback
+        setIsPlaying(true);
+      }
+    }
+  }, [autoPlay, audioUrl]);
 
   // Animation loop for timer-based playback (when no audio)
   useEffect(() => {
@@ -204,6 +220,7 @@ export default function CrankiePlayer({
       </div>
 
       {/* Controls */}
+      {!hideControls && (
       <div className="mt-4">
         {/* Progress Bar */}
         <div className="relative h-2 bg-soot/10 rounded-full overflow-hidden mb-3 cursor-pointer">
@@ -279,13 +296,14 @@ export default function CrankiePlayer({
           ))}
         </div>
       </div>
+      )}
 
       {/* Hidden Audio Element */}
       {audioUrl && (
         <audio
           ref={audioRef}
           src={audioUrl}
-          preload="metadata"
+          preload="auto"
         />
       )}
     </div>

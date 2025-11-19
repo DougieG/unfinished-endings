@@ -222,16 +222,19 @@ export default function PlaybackStation() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
       {/* Shadow puppet display */}
       {state === 'playing' && currentStory?.panorama && (
-        <div className="fixed inset-0 z-10">
-          <CrankiePlayer 
-            panorama={currentStory.panorama}
-            audioUrl={currentStory.audio_url}
-            autoPlay={true}
-            onEnded={async () => {
-              await playClosingMessage();
-              endSession();
-            }}
-          />
+        <div className="fixed inset-0 z-10 bg-black flex items-center justify-center">
+          <div className="w-full h-full">
+            <CrankiePlayer 
+              panorama={currentStory.panorama}
+              audioUrl={currentStory.audio_url}
+              autoPlay={true}
+              hideControls={true}
+              onEnded={async () => {
+                await playClosingMessage();
+                endSession();
+              }}
+            />
+          </div>
         </div>
       )}
 
