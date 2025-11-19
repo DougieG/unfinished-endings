@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         source: 'interior', // Phone 1 is interior line
         duration_s: durationS,
         audio_url: publicUrl,
-        consent: false, // Requires admin approval
+        consent: true, // Auto-approve for installation (add moderation later if needed)
         play_count: 0,
       })
       .select()
