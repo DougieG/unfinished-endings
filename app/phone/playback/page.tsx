@@ -145,32 +145,44 @@ export default function PlaybackStation() {
         headers: { 'Content-Type': 'application/json' },
       });
       
-      if (!res.ok) throw new Error('No stories available');
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('API error:', res.status, errorText);
+        throw new Error(`No stories available: ${res.status}`);
+      }
       
       const data = await res.json();
-      if (data.story) {
-        setCurrentStory(data.story);
-        setState('playing');
-        
-        // Use Audio element directly so we can detect when it ends
-        storyAudio.current = new Audio(data.story.audio_url);
-        
-        storyAudio.current.onended = async () => {
-          // Story finished naturally - play closing message
-          await playClosingMessage();
-          endSession();
-        };
-        
-        storyAudio.current.onerror = (err) => {
-          console.error('Story playback failed', err);
-          setState('error');
-        };
-        
-        storyAudio.current.play().catch(err => {
-          console.error('Story play failed', err);
-          setState('error');
-        });
+      console.log('Story data received:', data);
+      
+      if (!data.story || !data.story.audio_url) {
+        console.error('Invalid story data:', data);
+        throw new Error('No valid story returned');
       }
+      
+      setCurrentStory(data.story);
+      setState('playing');
+      
+      console.log('Playing story:', data.story.audio_url);
+      
+      // Use Audio element directly so we can detect when it ends
+      storyAudio.current = new Audio(data.story.audio_url);
+      
+      storyAudio.current.onended = async () => {
+        // Story finished naturally - play closing message
+        await playClosingMessage();
+        endSession();
+      };
+      
+      storyAudio.current.onerror = (err) => {
+        console.error('Story playback failed', err, storyAudio.current?.error);
+        setState('error');
+      };
+      
+      storyAudio.current.play().catch(err => {
+        console.error('Story play failed', err);
+        setState('error');
+      });
+      
     } catch (err) {
       console.error('Fetch story failed', err);
       setState('error');
