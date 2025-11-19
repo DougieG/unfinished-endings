@@ -40,18 +40,19 @@ export default function RecordingStation() {
 
   // Handle key events
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Ignore repeated keys
+    // OFF HOOK = keyup (button released when phone lifted)
+    const handleKeyUp = async (e: KeyboardEvent) => {
       if (e.repeat) return;
-
-      // Check for OFF HOOK (Pickup)
       if (PHONE_CONFIG.recording.offHook.includes(e.code)) {
         if (state === 'idle') {
           startSession();
         }
       }
+    };
 
-      // Check for ON HOOK (Hangup)
+    // ON HOOK = keydown (button pressed when phone cradled)
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (PHONE_CONFIG.recording.onHook.includes(e.code)) {
         if (state === 'recording' || state === 'intro') {
           endSession();
@@ -59,8 +60,12 @@ export default function RecordingStation() {
       }
     };
 
+    window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [state]);
 
   const startSession = async () => {

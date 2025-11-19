@@ -26,17 +26,21 @@ export default function PlaybackStation() {
 
   // Handle key events
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    // OFF HOOK = keyup (button released when phone lifted)
+    const handleKeyUp = async (e: KeyboardEvent) => {
       if (e.repeat) return;
-
-      // OFF HOOK - Start Playback
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
           startSession();
         }
       }
+    };
 
-      // ON HOOK - Stop Playback
+    // ON HOOK = keydown (button pressed when phone cradled)
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
+      // Hangup
       if (PHONE_CONFIG.playback.onHook.includes(e.code)) {
         endSession();
       }
@@ -44,7 +48,6 @@ export default function PlaybackStation() {
       // NEXT STORY
       if (PHONE_CONFIG.playback.next && PHONE_CONFIG.playback.next.includes(e.code)) {
         if (state === 'playing') {
-          // Stop current and fetch next
           audioManager.current?.stopPlayback();
           playRandomStory();
         }
@@ -59,8 +62,12 @@ export default function PlaybackStation() {
       }
     };
 
+    window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [state, currentStory]);
 
   const startSession = async () => {
