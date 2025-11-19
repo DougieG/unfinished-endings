@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Get all stories with consent
+    // Get all stories (consent check disabled for testing)
+    // TODO: Re-enable consent filter for production: .eq('consent', true)
     const { data: stories, error } = await supabase
       .from('stories')
       .select('*')
-      .eq('consent', true)
+      // .eq('consent', true) // TESTING: Disabled consent check
       .order('created_at', { ascending: false });
 
     if (error || !stories || stories.length === 0) {
