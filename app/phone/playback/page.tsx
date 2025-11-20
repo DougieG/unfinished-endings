@@ -10,6 +10,7 @@ type StationState = 'idle' | 'loading' | 'playing' | 'error';
 export default function PlaybackStation() {
   const [state, setState] = useState<StationState>('idle');
   const [currentStory, setCurrentStory] = useState<any>(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
@@ -89,10 +90,15 @@ export default function PlaybackStation() {
         resolve(); // Continue anyway
       };
       
-      audio.play().catch(err => {
-        console.error('Audio play failed', err);
-        resolve(); // Continue anyway
-      });
+      audio.play()
+        .then(() => {
+          console.log('✅ Intro played - audio context unlocked');
+          setAudioUnlocked(true); // Mark audio as unlocked
+        })
+        .catch(err => {
+          console.error('Audio play failed', err);
+          resolve(); // Continue anyway
+        });
     });
   };
 
@@ -116,6 +122,7 @@ export default function PlaybackStation() {
 
   const startSession = async () => {
     try {
+      console.log('📞 Starting playback session, audio unlocked:', audioUnlocked);
       setState('loading');
       
       // 1. Register session
@@ -127,7 +134,7 @@ export default function PlaybackStation() {
       const data = await res.json();
       if (data.session) sessionId.current = data.session.sessionId;
 
-      // 2. Play intro message
+      // 2. Play intro message (this unlocks audio context on first play)
       await playIntroMessage();
 
       // 3. Get story and play
@@ -196,6 +203,7 @@ export default function PlaybackStation() {
   };
 
   const endSession = async () => {
+    console.log('📴 Ending playback session');
     setState('idle');
     setCurrentStory(null);
     
