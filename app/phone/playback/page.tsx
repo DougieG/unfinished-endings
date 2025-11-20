@@ -81,6 +81,7 @@ export default function PlaybackStation() {
   const playIntroMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
+      audio.playsInline = true; // iOS requirement
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
@@ -98,6 +99,7 @@ export default function PlaybackStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/3ThankyePlayback.mp3');
+      audio.playsInline = true; // iOS requirement
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
@@ -238,28 +240,30 @@ export default function PlaybackStation() {
         </div>
       )}
 
-      {/* Status overlay */}
-      <div className="relative z-20 text-center space-y-8 p-8">
-        <h1 className="text-4xl font-bold tracking-wider uppercase text-gray-500">
-          Playback Station
-        </h1>
+      {/* Status overlay - ONLY show when NOT playing crankie */}
+      {!(state === 'playing' && currentStory?.panorama) && (
+        <div className="relative z-20 text-center space-y-8 p-8">
+          <h1 className="text-4xl font-bold tracking-wider uppercase text-gray-500">
+            Playback Station
+          </h1>
 
-        <div className="text-6xl font-mono">
-          {state === 'idle' && <span className="text-gray-600">Pick up to listen</span>}
-          {state === 'loading' && <span className="text-yellow-400 animate-pulse">Connecting...</span>}
-          {state === 'playing' && !currentStory?.panorama && (
-            <div className="space-y-4">
-              <span className="text-green-500">Playing Story</span>
-              {currentStory && (
-                <div className="text-2xl text-gray-400 mt-4">
-                  #{currentStory.id.slice(0, 8)}
-                </div>
-              )}
-            </div>
-          )}
-          {state === 'error' && <span className="text-red-600">Unavailable</span>}
+          <div className="text-6xl font-mono">
+            {state === 'idle' && <span className="text-gray-600">Pick up to listen</span>}
+            {state === 'loading' && <span className="text-yellow-400 animate-pulse">Connecting...</span>}
+            {state === 'playing' && !currentStory?.panorama && (
+              <div className="space-y-4">
+                <span className="text-green-500">Playing Story</span>
+                {currentStory && (
+                  <div className="text-2xl text-gray-400 mt-4">
+                    #{currentStory.id.slice(0, 8)}
+                  </div>
+                )}
+              </div>
+            )}
+            {state === 'error' && <span className="text-red-600">Unavailable</span>}
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }

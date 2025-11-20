@@ -63,9 +63,22 @@ export default function CrankiePlayer({
     if (autoPlay) {
       const audio = audioRef.current;
       if (audio && audioUrl) {
-        // Play audio (which will trigger isPlaying state via event listener)
-        audio.play().catch(err => console.error('AutoPlay failed:', err));
+        console.log('🎬 CrankiePlayer: Attempting autoPlay with audio');
+        // Slight delay to ensure DOM is ready
+        setTimeout(() => {
+          audio.play()
+            .then(() => {
+              console.log('✅ CrankiePlayer: Audio autoPlay successful');
+            })
+            .catch(err => {
+              console.error('❌ CrankiePlayer: AutoPlay failed:', err);
+              // iOS Safari blocks autoplay - user must interact first
+              // Still start visual playback even if audio fails
+              setIsPlaying(true);
+            });
+        }, 100);
       } else {
+        console.log('🎬 CrankiePlayer: Starting timer-based playback (no audio)');
         // Start timer-based playback
         setIsPlaying(true);
       }
@@ -329,6 +342,11 @@ export default function CrankiePlayer({
           ref={audioRef}
           src={audioUrl}
           preload="auto"
+          playsInline
+          onLoadedData={() => console.log('🎵 CrankiePlayer: Audio loaded')}
+          onCanPlay={() => console.log('🎵 CrankiePlayer: Audio can play')}
+          onPlay={() => console.log('▶️ CrankiePlayer: Audio playing')}
+          onError={(e) => console.error('❌ CrankiePlayer: Audio error', e)}
         />
       )}
     </div>
