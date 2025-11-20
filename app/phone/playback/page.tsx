@@ -11,12 +11,13 @@ type StationState = 'idle' | 'loading' | 'playing' | 'error';
 export default function PlaybackStation() {
   const [state, setState] = useState<StationState>('idle');
   const [currentStory, setCurrentStory] = useState<any>(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [showTapToStart, setShowTapToStart] = useState(false);
+  const [storyData, setStoryData] = useState<any>(null);
   
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
   const storyAudio = useRef<HTMLAudioElement | null>(null);
-  const crankieAudioRef = useRef<HTMLAudioElement | null>(null); // Pre-load crankie audio
+  const crankieAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     audioManager.current = new PhoneAudioManager({
@@ -36,48 +37,19 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          console.log('📞 PICKUP');
+          console.log('📞 PICKUP - fetching story');
           setState('loading');
           
-          // Create audio element in user gesture
-          const crankieAudio = new Audio();
-          crankieAudio.setAttribute('playsinline', '');
-          crankieAudioRef.current = crankieAudio;
-          
-          // Now fetch and set src - audio will start automatically
+          // Fetch story first
           fetch('/api/phone/playback/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
             .then(res => res.json())
             .then(data => {
-              console.log('📦 GOT STORY:', data.story.id);
-              
-              if (data.story.panorama && data.story.audio_url) {
-                console.log('🎵 SET SRC:', data.story.audio_url);
-                crankieAudio.src = data.story.audio_url;
-                
-                // Tiny delay, then play (still close enough to gesture)
-                setTimeout(() => {
-                  console.log('▶️ PLAY NOW');
-                  crankieAudio.play()
-                    .then(() => {
-                      console.log('✅ PLAYING');
-                      setCurrentStory(data.story);
-                      setState('playing');
-                    })
-                    .catch(err => {
-                      console.error('❌ Play failed:', err);
-                      // Show anyway, let CrankiePlayer try
-                      setCurrentStory(data.story);
-                      setState('playing');
-                    });
-                }, 50); // Very short delay
-                
-              } else {
-                console.error('No panorama');
-                setState('error');
-              }
+              console.log('📦 GOT STORY');
+              setStoryData(data);
+              setShowTapToStart(true); // Show tap prompt
             })
             .catch(err => {
               console.error('Fetch error:', err);
@@ -215,9 +187,45 @@ export default function PlaybackStation() {
     sessionId.current = null;
   };
 
+  const handleTapToStart = () => {
+    console.log('👆 TAP TO START');
+    setShowTapToStart(false);
+    
+    if (storyData?.story?.panorama && storyData?.story?.audio_url) {
+      // Create and play audio NOW (in tap gesture)
+      const crankieAudio = new Audio();
+      crankieAudio.setAttribute('playsinline', '');
+      crankieAudio.src = storyData.story.audio_url;
+      crankieAudioRef.current = crankieAudio;
+      
+      console.log('▶️ PLAYING from tap');
+      crankieAudio.play()
+        .then(() => {
+          console.log('✅ SUCCESS');
+          setCurrentStory(storyData.story);
+          setState('playing');
+        })
+        .catch(err => console.error('❌ Failed:', err));
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
       <DebugConsole />
+      
+      {/* TAP TO START OVERLAY */}
+      {showTapToStart && (
+        <div 
+          onClick={handleTapToStart}
+          className="fixed inset-0 z-50 bg-black flex items-center justify-center cursor-pointer"
+        >
+          <div className="text-center">
+            <div className="text-8xl mb-8">👆</div>
+            <h1 className="text-6xl font-bold mb-4">TAP TO START</h1>
+            <p className="text-2xl text-gray-400">Story ready to play</p>
+          </div>
+        </div>
+      )}
       {/* Shadow puppet display */}
       {state === 'playing' && currentStory?.panorama && crankieAudioRef.current && (
         <div className="fixed inset-0 z-10 bg-black flex items-center justify-center">
