@@ -112,8 +112,7 @@ export default function PlaybackStation() {
       
       audio.play()
         .then(() => {
-          console.log('✅ Intro played - audio context unlocked');
-          setAudioUnlocked(true); // Mark audio as unlocked
+          console.log('✅ Intro played');
         })
         .catch(err => {
           console.error('Audio play failed', err);
