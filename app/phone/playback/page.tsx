@@ -81,7 +81,7 @@ export default function PlaybackStation() {
   const playIntroMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
-      audio.playsInline = true; // iOS requirement
+      audio.setAttribute('playsinline', ''); // iOS requirement
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
@@ -99,7 +99,7 @@ export default function PlaybackStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/3ThankyePlayback.mp3');
-      audio.playsInline = true; // iOS requirement
+      audio.setAttribute('playsinline', ''); // iOS requirement
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
