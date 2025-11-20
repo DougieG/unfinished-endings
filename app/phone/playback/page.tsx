@@ -44,13 +44,30 @@ export default function PlaybackStation() {
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
+          // Add event listeners to track when audio actually plays
+          crankieAudio.addEventListener('loadeddata', () => {
+            console.log('📥 Audio loaded');
+          });
+          
+          crankieAudio.addEventListener('canplay', () => {
+            console.log('🎵 Audio can play');
+          });
+          
+          crankieAudio.addEventListener('playing', () => {
+            console.log('▶️ Audio PLAYING event fired');
+          });
+          
+          crankieAudio.addEventListener('play', () => {
+            console.log('▶️ Audio PLAY event fired');
+          });
+          
           // CRITICAL: Call play() synchronously in gesture - audio will start when src loads
           console.log('▶️ CALLING PLAY (no src yet)');
           const playPromise = crankieAudio.play();
           
           playPromise
-            .then(() => console.log('✅ Play() accepted by iOS'))
-            .catch(err => console.error('❌ Play() rejected:', err));
+            .then(() => console.log('✅ Play() promise resolved'))
+            .catch(err => console.error('❌ Play() promise rejected:', err));
           
           // Now fetch and set src - audio will start automatically
           fetch('/api/phone/playback/start', {
@@ -64,7 +81,13 @@ export default function PlaybackStation() {
               if (data.story.panorama && data.story.audio_url) {
                 console.log('🎵 SETTING SRC:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
-                // Audio should start playing automatically now
+                crankieAudio.load(); // Force load
+                
+                // Try playing again after src is set
+                console.log('▶️ PLAY AGAIN after src set');
+                crankieAudio.play()
+                  .then(() => console.log('✅ Playing after src'))
+                  .catch(err => console.error('❌ Play after src failed:', err));
                 
                 setCurrentStory(data.story);
                 setState('playing');
