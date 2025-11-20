@@ -62,30 +62,15 @@ export default function CrankiePlayer({
 
   // Handle autoPlay
   useEffect(() => {
-    if (autoPlay) {
+    if (autoPlay && audioRef.current) {
       const audio = audioRef.current;
-      if (audio && (audioUrl || audioElement)) {
-        console.log('🎬 CrankiePlayer: Attempting autoPlay with audio', audioElement ? '(pre-loaded)' : '(URL)');
-        // Slight delay to ensure DOM is ready
-        setTimeout(() => {
-          audio.play()
-            .then(() => {
-              console.log('✅ CrankiePlayer: Audio autoPlay successful');
-            })
-            .catch(err => {
-              console.error('❌ CrankiePlayer: AutoPlay failed:', err);
-              // iOS Safari blocks autoplay - user must interact first
-              // Still start visual playback even if audio fails
-              setIsPlaying(true);
-            });
-        }, 100);
-      } else {
-        console.log('🎬 CrankiePlayer: Starting timer-based playback (no audio)');
-        // Start timer-based playback
-        setIsPlaying(true);
-      }
-    }
-  }, [autoPlay, audioUrl, audioElement]);
+      console.log('🎬 CrankiePlayer: AutoPlay triggered', { 
+        hasAudio: !!audio, 
+        hasUrl: !!audioUrl, 
+        hasElement: !!audioElement,
+        readyState: audio.readyState,
+        src: audio.src 
+      });\n      \n      // Wait for audio to be loaded enough to play\n      const attemptPlay = () => {\n        if (audio.readyState >= 2) { // HAVE_CURRENT_DATA\n          console.log('🎵 Audio ready, playing...');\n          audio.play()\n            .then(() => {\n              console.log('✅ CrankiePlayer: PLAYING');\n            })\n            .catch(err => {\n              console.error('❌ CrankiePlayer: Play failed:', err);\n              setIsPlaying(true); // Start visual anyway\n            });\n        } else {\n          console.log('⏳ Waiting for audio to load, readyState:', audio.readyState);\n          audio.addEventListener('canplay', () => {\n            console.log('🎵 canplay event, attempting play');\n            audio.play()\n              .then(() => console.log('✅ Playing after canplay'))\n              .catch(err => {\n                console.error('❌ Play failed:', err);\n                setIsPlaying(true);\n              });\n          }, { once: true });\n        }\n      };\n      \n      // Small delay to ensure src is loaded\n      setTimeout(attemptPlay, 200);\n    } else if (autoPlay) {\n      console.log('🎬 CrankiePlayer: No audio, starting timer-based playback');\n      setIsPlaying(true);\n    }\n  }, [autoPlay, audioUrl, audioElement]);
 
   // Animation loop for timer-based playback (when no audio)
   useEffect(() => {

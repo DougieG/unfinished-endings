@@ -35,10 +35,23 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          // CRITICAL: Create and start intro audio HERE synchronously with user gesture
+          console.log('📞 PHONE PICKED UP - Starting session');
+          
+          // CRITICAL: Create BOTH audio elements HERE in user gesture
           const introAudio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
           introAudio.setAttribute('playsinline', '');
-          introAudio.play().catch(err => console.error('Intro failed:', err));
+          introAudio.preload = 'auto';
+          
+          // Pre-create crankie audio element (will load URL after fetch)
+          const crankieAudio = new Audio();
+          crankieAudio.setAttribute('playsinline', '');
+          crankieAudio.preload = 'auto';
+          crankieAudioRef.current = crankieAudio;
+          
+          // Start intro immediately
+          introAudio.play()
+            .then(() => console.log('✅ Intro playing'))
+            .catch(err => console.error('❌ Intro failed:', err));
           
           startSession(introAudio);
         }
@@ -184,12 +197,11 @@ export default function PlaybackStation() {
       console.log('Playing story:', data.story.audio_url);
       console.log('Panorama data:', data.story.panorama);
       
-      // Pre-load crankie audio NOW (while still in user interaction context)
-      if (data.story.panorama && data.story.audio_url) {
-        crankieAudioRef.current = new Audio(data.story.audio_url);
-        crankieAudioRef.current.setAttribute('playsinline', '');
-        crankieAudioRef.current.load(); // Preload
-        console.log('🎵 Crankie audio pre-loaded');
+      // Load URL into pre-created audio element (maintains user gesture context)
+      if (data.story.panorama && data.story.audio_url && crankieAudioRef.current) {
+        console.log('🎵 Loading crankie audio URL:', data.story.audio_url);
+        crankieAudioRef.current.src = data.story.audio_url;
+        crankieAudioRef.current.load();
       }
       
       // ONLY play audio manually if there's NO panorama (CrankiePlayer handles it otherwise)
