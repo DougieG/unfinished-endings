@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { PhoneAudioManager } from '@/lib/phone-audio';
 import { PHONE_CONFIG } from '@/lib/phone-config';
 import CrankiePlayer from '@/components/CrankiePlayer';
+import DebugConsole from '@/components/DebugConsole';
 
 type StationState = 'idle' | 'loading' | 'playing' | 'error';
 
@@ -276,6 +277,7 @@ export default function PlaybackStation() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+      <DebugConsole />
       {/* Shadow puppet display */}
       {state === 'playing' && currentStory?.panorama && crankieAudioRef.current && (
         <div className="fixed inset-0 z-10 bg-black flex items-center justify-center">
