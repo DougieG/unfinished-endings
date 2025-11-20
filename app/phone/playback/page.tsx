@@ -36,40 +36,40 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          console.log('📞 PICKUP');
+          console.log('📞 PICKUP - STARTING CRANKIE NOW');
           setState('loading');
-          
-          // Create intro audio and play immediately
-          const introAudio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
-          introAudio.setAttribute('playsinline', '');
-          introAudio.play().catch(err => console.error('Intro fail:', err));
           
           // Create crankie audio element NOW
           const crankieAudio = new Audio();
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          // Fetch story IMMEDIATELY (while in gesture context)
+          // Fetch story IMMEDIATELY
           fetch('/api/phone/playback/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
             .then(res => res.json())
             .then(data => {
-              console.log('📦 Story fetched:', data.story.id);
+              console.log('📦 STORY:', data.story.id);
               
-              // Load and play crankie audio NOW (still close to gesture)
               if (data.story.panorama && data.story.audio_url) {
-                console.log('🎵 Loading audio in crankie element');
+                console.log('🎵 LOADING:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
-                crankieAudio.load();
+                
+                // PLAY IMMEDIATELY
                 crankieAudio.play()
-                  .then(() => console.log('✅ CRANKIE PLAYING'))
-                  .catch(err => console.error('❌ CRANKIE FAILED:', err));
+                  .then(() => {
+                    console.log('✅ PLAYING');
+                    // Set state to show crankie
+                    setCurrentStory(data.story);
+                    setState('playing');
+                  })
+                  .catch(err => console.error('❌ FAILED:', err));
+              } else {
+                console.error('No panorama data');
+                setState('error');
               }
-              
-              // Continue with session
-              startSession(introAudio, data);
             })
             .catch(err => {
               console.error('Fetch failed:', err);
@@ -160,34 +160,9 @@ export default function PlaybackStation() {
     });
   };
 
-  const startSession = async (introAudio: HTMLAudioElement, storyData: any) => {
-    try {
-      console.log('📞 Starting playback session');
-      
-      // 1. Register session
-      const res = await fetch('/api/phone/hook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: 2, state: 'off-hook' }),
-      });
-      const data = await res.json();
-      if (data.session) sessionId.current = data.session.sessionId;
-
-      // 2. Wait for intro to finish
-      await new Promise<void>((resolve) => {
-        introAudio.onended = () => resolve();
-        introAudio.onerror = () => resolve();
-      });
-
-      // 3. Set story and playing state (audio already playing)
-      setCurrentStory(storyData.story);
-      setState('playing');
-      console.log('🎬 Now displaying crankie');
-
-    } catch (err) {
-      console.error('Playback start failed', err);
-      setState('error');
-    }
+  // Not needed anymore - everything happens in keyup handler
+  const startSession = async () => {
+    console.log('Session tracking disabled for testing');
   };
 
   // This function is no longer needed - story fetched in keyup handler
