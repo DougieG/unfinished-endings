@@ -92,11 +92,9 @@ export default function PlaybackStation() {
                 
                 // Timeout fallback - show anyway after 2 seconds
                 setTimeout(() => {
-                  if (state === 'loading') {
-                    console.log('⏰ Timeout - showing crankie anyway');
-                    setCurrentStory(data.story);
-                    setState('playing');
-                  }
+                  console.log('⏰ Timeout - showing crankie anyway');
+                  setCurrentStory(data.story);
+                  setState('playing');
                 }, 2000);
                 
               } else {
