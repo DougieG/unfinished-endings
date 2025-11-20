@@ -60,26 +60,32 @@ export default function CrankiePlayer({
     return !nextScene || progress < nextScene.beat.timestamp_percent;
   }) || panorama.scenes[0];
 
-  // Handle autoPlay - Audio already playing from parent, just monitor state
+  // Handle autoPlay - Monitor if audio is actually playing
   useEffect(() => {
     if (!autoPlay) return;
     
     const audio = audioRef.current;
-    console.log('🎬 CrankiePlayer mounted, audio state:', {
+    console.log('🎬 CrankiePlayer mounted, checking audio:', {
       hasAudio: !!audio,
       audioSrc: audio?.src,
       paused: audio?.paused,
-      readyState: audio?.readyState
+      readyState: audio?.readyState,
+      currentTime: audio?.currentTime
     });
     
-    // Audio should already be playing from parent component
-    // If not playing, try to start it (fallback)
+    // If audio exists and is playing, the event listeners will handle state
+    // If audio exists but paused, try to play
     if (audio && audio.paused && audio.src) {
-      console.log('⚠️ Audio not playing, attempting fallback play');
-      audio.play().catch(err => {
-        console.error('❌ Fallback play failed:', err);
-        setIsPlaying(true); // Start visual anyway
-      });
+      console.log('⚠️ Audio paused, playing now');
+      audio.play()
+        .then(() => console.log('✅ Audio playing from CrankiePlayer'))
+        .catch(err => {
+          console.error('❌ Play failed:', err);
+          setIsPlaying(true); // Start visual anyway
+        });
+    } else if (audio && !audio.paused) {
+      console.log('✅ Audio already playing, setting isPlaying=true');
+      setIsPlaying(true);
     }
   }, [autoPlay]);
 
@@ -89,10 +95,21 @@ export default function CrankiePlayer({
     
     // If we have audio (either URL or element), sync to it
     if (audio && (audioUrl || audioElement)) {
-      const updateTime = () => setCurrentTime(audio.currentTime);
-      const handlePlay = () => setIsPlaying(true);
-      const handlePause = () => setIsPlaying(false);
+      console.log('🔗 Attaching audio event listeners');
+      
+      const updateTime = () => {
+        setCurrentTime(audio.currentTime);
+      };
+      const handlePlay = () => {
+        console.log('▶️ Audio play event received');
+        setIsPlaying(true);
+      };
+      const handlePause = () => {
+        console.log('⏸️ Audio pause event received');
+        setIsPlaying(false);
+      };
       const handleEnded = () => {
+        console.log('⏹️ Audio ended event received');
         setIsPlaying(false);
         if (onEnded) onEnded();
       };
@@ -101,8 +118,14 @@ export default function CrankiePlayer({
       audio.addEventListener('play', handlePlay);
       audio.addEventListener('pause', handlePause);
       audio.addEventListener('ended', handleEnded);
+      
+      console.log('✅ Event listeners attached, current state:', {
+        paused: audio.paused,
+        currentTime: audio.currentTime
+      });
 
       return () => {
+        console.log('🔌 Removing audio event listeners');
         audio.removeEventListener('timeupdate', updateTime);
         audio.removeEventListener('play', handlePlay);
         audio.removeEventListener('pause', handlePause);
