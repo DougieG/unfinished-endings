@@ -81,17 +81,11 @@ export default function PlaybackStation() {
               if (data.story.panorama && data.story.audio_url) {
                 console.log('🎵 SETTING SRC:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
-                crankieAudio.load(); // Force load
-                
-                // Try playing again after src is set
-                console.log('▶️ PLAY AGAIN after src set');
-                crankieAudio.play()
-                  .then(() => console.log('✅ Playing after src'))
-                  .catch(err => console.error('❌ Play after src failed:', err));
+                // Don't call play() again - first play() should start audio when src loads
                 
                 setCurrentStory(data.story);
                 setState('playing');
-                console.log('🎬 SHOWING CRANKIE');
+                console.log('🎬 CRANKIE SHOWING - waiting for audio events');
               } else {
                 console.error('No panorama');
                 setState('error');
