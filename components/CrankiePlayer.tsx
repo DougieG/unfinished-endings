@@ -22,6 +22,7 @@ interface CrankiePanorama {
 interface CrankiePlayerProps {
   panorama: CrankiePanorama;
   audioUrl?: string;
+  audioElement?: HTMLAudioElement; // Pre-loaded audio element (for iOS autoplay)
   autoPlay?: boolean;
   onEnded?: () => void;
   hideControls?: boolean;
@@ -30,6 +31,7 @@ interface CrankiePlayerProps {
 export default function CrankiePlayer({ 
   panorama, 
   audioUrl,
+  audioElement,
   autoPlay = false,
   onEnded,
   hideControls = false
@@ -38,7 +40,7 @@ export default function CrankiePlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration] = useState(panorama.scroll_duration);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(audioElement || null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -62,8 +64,8 @@ export default function CrankiePlayer({
   useEffect(() => {
     if (autoPlay) {
       const audio = audioRef.current;
-      if (audio && audioUrl) {
-        console.log('🎬 CrankiePlayer: Attempting autoPlay with audio');
+      if (audio && (audioUrl || audioElement)) {
+        console.log('🎬 CrankiePlayer: Attempting autoPlay with audio', audioElement ? '(pre-loaded)' : '(URL)');
         // Slight delay to ensure DOM is ready
         setTimeout(() => {
           audio.play()
@@ -83,7 +85,7 @@ export default function CrankiePlayer({
         setIsPlaying(true);
       }
     }
-  }, [autoPlay, audioUrl]);
+  }, [autoPlay, audioUrl, audioElement]);
 
   // Animation loop for timer-based playback (when no audio)
   useEffect(() => {
@@ -336,8 +338,8 @@ export default function CrankiePlayer({
       </div>
       )}
 
-      {/* Hidden Audio Element */}
-      {audioUrl && (
+      {/* Hidden Audio Element - only if using URL (not pre-loaded element) */}
+      {audioUrl && !audioElement && (
         <audio
           ref={audioRef}
           src={audioUrl}

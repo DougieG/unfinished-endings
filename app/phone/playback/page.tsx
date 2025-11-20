@@ -15,6 +15,7 @@ export default function PlaybackStation() {
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
   const storyAudio = useRef<HTMLAudioElement | null>(null);
+  const crankieAudioRef = useRef<HTMLAudioElement | null>(null); // Pre-load crankie audio
 
   useEffect(() => {
     audioManager.current = new PhoneAudioManager({
@@ -34,7 +35,12 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          startSession();
+          // CRITICAL: Create and start intro audio HERE synchronously with user gesture
+          const introAudio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
+          introAudio.setAttribute('playsinline', '');
+          introAudio.play().catch(err => console.error('Intro failed:', err));
+          
+          startSession(introAudio);
         }
       }
     };
@@ -120,7 +126,7 @@ export default function PlaybackStation() {
     });
   };
 
-  const startSession = async () => {
+  const startSession = async (introAudio: HTMLAudioElement) => {
     try {
       console.log('📞 Starting playback session, audio unlocked:', audioUnlocked);
       setState('loading');
@@ -134,8 +140,11 @@ export default function PlaybackStation() {
       const data = await res.json();
       if (data.session) sessionId.current = data.session.sessionId;
 
-      // 2. Play intro message (this unlocks audio context on first play)
-      await playIntroMessage();
+      // 2. Wait for intro to finish (already playing from user gesture)
+      await new Promise<void>((resolve) => {
+        introAudio.onended = () => resolve();
+        introAudio.onerror = () => resolve(); // Continue anyway
+      });
 
       // 3. Get story and play
       await playRandomStory();
@@ -175,9 +184,18 @@ export default function PlaybackStation() {
       console.log('Playing story:', data.story.audio_url);
       console.log('Panorama data:', data.story.panorama);
       
+      // Pre-load crankie audio NOW (while still in user interaction context)
+      if (data.story.panorama && data.story.audio_url) {
+        crankieAudioRef.current = new Audio(data.story.audio_url);
+        crankieAudioRef.current.setAttribute('playsinline', '');
+        crankieAudioRef.current.load(); // Preload
+        console.log('🎵 Crankie audio pre-loaded');
+      }
+      
       // ONLY play audio manually if there's NO panorama (CrankiePlayer handles it otherwise)
       if (!data.story.panorama) {
         storyAudio.current = new Audio(data.story.audio_url);
+        storyAudio.current.setAttribute('playsinline', '');
         
         storyAudio.current.onended = async () => {
           await playClosingMessage();
@@ -194,7 +212,7 @@ export default function PlaybackStation() {
           setState('error');
         });
       }
-      // If panorama exists, CrankiePlayer will handle audio playback
+      // If panorama exists, CrankiePlayer will use crankieAudioRef
       
     } catch (err) {
       console.error('Fetch story failed', err);
@@ -231,12 +249,12 @@ export default function PlaybackStation() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
       {/* Shadow puppet display */}
-      {state === 'playing' && currentStory?.panorama && (
+      {state === 'playing' && currentStory?.panorama && crankieAudioRef.current && (
         <div className="fixed inset-0 z-10 bg-black flex items-center justify-center">
           <div className="w-full h-full">
             <CrankiePlayer 
               panorama={currentStory.panorama}
-              audioUrl={currentStory.audio_url}
+              audioElement={crankieAudioRef.current}
               autoPlay={true}
               hideControls={true}
               onEnded={async () => {
