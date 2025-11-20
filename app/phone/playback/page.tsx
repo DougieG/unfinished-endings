@@ -39,35 +39,10 @@ export default function PlaybackStation() {
           console.log('📞 PICKUP');
           setState('loading');
           
-          // Create audio and CALL PLAY() NOW (before src is set)
+          // Create audio element in user gesture
           const crankieAudio = new Audio();
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
-          
-          // Add event listeners to track when audio actually plays
-          crankieAudio.addEventListener('loadeddata', () => {
-            console.log('📥 Audio loaded');
-          });
-          
-          crankieAudio.addEventListener('canplay', () => {
-            console.log('🎵 Audio can play');
-          });
-          
-          crankieAudio.addEventListener('playing', () => {
-            console.log('▶️ Audio PLAYING event fired');
-          });
-          
-          crankieAudio.addEventListener('play', () => {
-            console.log('▶️ Audio PLAY event fired');
-          });
-          
-          // CRITICAL: Call play() synchronously in gesture - audio will start when src loads
-          console.log('▶️ CALLING PLAY (no src yet)');
-          const playPromise = crankieAudio.play();
-          
-          playPromise
-            .then(() => console.log('✅ Play() promise resolved'))
-            .catch(err => console.error('❌ Play() promise rejected:', err));
           
           // Now fetch and set src - audio will start automatically
           fetch('/api/phone/playback/start', {
@@ -79,23 +54,25 @@ export default function PlaybackStation() {
               console.log('📦 GOT STORY:', data.story.id);
               
               if (data.story.panorama && data.story.audio_url) {
-                console.log('🎵 SETTING SRC:', data.story.audio_url);
+                console.log('🎵 SET SRC:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
-                crankieAudio.load(); // Force load
                 
-                // Wait for audio to actually be ready, THEN show crankie
-                crankieAudio.addEventListener('canplay', () => {
-                  console.log('✅ AUDIO READY - showing crankie now');
-                  setCurrentStory(data.story);
-                  setState('playing');
-                }, { once: true });
-                
-                // Timeout fallback - show anyway after 2 seconds
+                // Tiny delay, then play (still close enough to gesture)
                 setTimeout(() => {
-                  console.log('⏰ Timeout - showing crankie anyway');
-                  setCurrentStory(data.story);
-                  setState('playing');
-                }, 2000);
+                  console.log('▶️ PLAY NOW');
+                  crankieAudio.play()
+                    .then(() => {
+                      console.log('✅ PLAYING');
+                      setCurrentStory(data.story);
+                      setState('playing');
+                    })
+                    .catch(err => {
+                      console.error('❌ Play failed:', err);
+                      // Show anyway, let CrankiePlayer try
+                      setCurrentStory(data.story);
+                      setState('playing');
+                    });
+                }, 50); // Very short delay
                 
               } else {
                 console.error('No panorama');
