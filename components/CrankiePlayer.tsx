@@ -70,7 +70,41 @@ export default function CrankiePlayer({
         hasElement: !!audioElement,
         readyState: audio.readyState,
         src: audio.src 
-      });\n      \n      // Wait for audio to be loaded enough to play\n      const attemptPlay = () => {\n        if (audio.readyState >= 2) { // HAVE_CURRENT_DATA\n          console.log('🎵 Audio ready, playing...');\n          audio.play()\n            .then(() => {\n              console.log('✅ CrankiePlayer: PLAYING');\n            })\n            .catch(err => {\n              console.error('❌ CrankiePlayer: Play failed:', err);\n              setIsPlaying(true); // Start visual anyway\n            });\n        } else {\n          console.log('⏳ Waiting for audio to load, readyState:', audio.readyState);\n          audio.addEventListener('canplay', () => {\n            console.log('🎵 canplay event, attempting play');\n            audio.play()\n              .then(() => console.log('✅ Playing after canplay'))\n              .catch(err => {\n                console.error('❌ Play failed:', err);\n                setIsPlaying(true);\n              });\n          }, { once: true });\n        }\n      };\n      \n      // Small delay to ensure src is loaded\n      setTimeout(attemptPlay, 200);\n    } else if (autoPlay) {\n      console.log('🎬 CrankiePlayer: No audio, starting timer-based playback');\n      setIsPlaying(true);\n    }\n  }, [autoPlay, audioUrl, audioElement]);
+      });
+      
+      // Wait for audio to be loaded enough to play
+      const attemptPlay = () => {
+        if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+          console.log('🎵 Audio ready, playing...');
+          audio.play()
+            .then(() => {
+              console.log('✅ CrankiePlayer: PLAYING');
+            })
+            .catch(err => {
+              console.error('❌ CrankiePlayer: Play failed:', err);
+              setIsPlaying(true); // Start visual anyway
+            });
+        } else {
+          console.log('⏳ Waiting for audio to load, readyState:', audio.readyState);
+          audio.addEventListener('canplay', () => {
+            console.log('🎵 canplay event, attempting play');
+            audio.play()
+              .then(() => console.log('✅ Playing after canplay'))
+              .catch(err => {
+                console.error('❌ Play failed:', err);
+                setIsPlaying(true);
+              });
+          }, { once: true });
+        }
+      };
+      
+      // Small delay to ensure src is loaded
+      setTimeout(attemptPlay, 200);
+    } else if (autoPlay) {
+      console.log('🎬 CrankiePlayer: No audio, starting timer-based playback');
+      setIsPlaying(true);
+    }
+  }, [autoPlay, audioUrl, audioElement]);
 
   // Animation loop for timer-based playback (when no audio)
   useEffect(() => {
