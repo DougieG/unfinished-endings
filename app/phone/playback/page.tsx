@@ -192,16 +192,17 @@ export default function PlaybackStation() {
       console.log('Playing story:', data.story.audio_url);
       console.log('Panorama data:', data.story.panorama);
       
-      // Load URL into pre-created audio element (maintains user gesture context)
+      // Load URL into pre-created audio element and START PLAYING immediately
       if (data.story.panorama && data.story.audio_url && crankieAudioRef.current) {
         console.log('🎵 LOADING CRANKIE AUDIO:', data.story.audio_url);
         crankieAudioRef.current.src = data.story.audio_url;
         crankieAudioRef.current.load();
-        console.log('🎵 Audio element ready:', {
-          src: crankieAudioRef.current.src,
-          readyState: crankieAudioRef.current.readyState,
-          paused: crankieAudioRef.current.paused
-        });
+        
+        // CRITICAL: Call play() HERE while still in the user gesture call chain
+        console.log('▶️ STARTING PLAYBACK NOW (in gesture context)');
+        crankieAudioRef.current.play()
+          .then(() => console.log('✅ CRANKIE AUDIO PLAYING'))
+          .catch(err => console.error('❌ CRANKIE PLAY FAILED:', err));
       } else {
         console.log('⚠️ NOT LOADING AUDIO:', {
           hasPanorama: !!data.story.panorama,

@@ -60,32 +60,26 @@ export default function CrankiePlayer({
     return !nextScene || progress < nextScene.beat.timestamp_percent;
   }) || panorama.scenes[0];
 
-  // Handle autoPlay - SIMPLE AND BULLETPROOF
+  // Handle autoPlay - Audio already playing from parent, just monitor state
   useEffect(() => {
     if (!autoPlay) return;
     
     const audio = audioRef.current;
-    console.log('🎬 AUTOPLAY EFFECT:', {
+    console.log('🎬 CrankiePlayer mounted, audio state:', {
       hasAudio: !!audio,
       audioSrc: audio?.src,
-      readyState: audio?.readyState,
-      paused: audio?.paused
+      paused: audio?.paused,
+      readyState: audio?.readyState
     });
     
-    if (audio && audio.src) {
-      console.log('▶️ CALLING PLAY');
-      audio.play()
-        .then(() => console.log('✅ PLAY SUCCESS'))
-        .catch(err => {
-          console.error('❌ PLAY FAILED:', err);
-          setIsPlaying(true); // Start visual anyway
-        });
-    } else if (audio) {
-      console.log('⚠️ Audio element exists but no src');
-      setIsPlaying(true);
-    } else {
-      console.log('⚠️ No audio element');
-      setIsPlaying(true);
+    // Audio should already be playing from parent component
+    // If not playing, try to start it (fallback)
+    if (audio && audio.paused && audio.src) {
+      console.log('⚠️ Audio not playing, attempting fallback play');
+      audio.play().catch(err => {
+        console.error('❌ Fallback play failed:', err);
+        setIsPlaying(true); // Start visual anyway
+      });
     }
   }, [autoPlay]);
 
