@@ -81,11 +81,24 @@ export default function PlaybackStation() {
               if (data.story.panorama && data.story.audio_url) {
                 console.log('🎵 SETTING SRC:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
-                // Don't call play() again - first play() should start audio when src loads
+                crankieAudio.load(); // Force load
                 
-                setCurrentStory(data.story);
-                setState('playing');
-                console.log('🎬 CRANKIE SHOWING - waiting for audio events');
+                // Wait for audio to actually be ready, THEN show crankie
+                crankieAudio.addEventListener('canplay', () => {
+                  console.log('✅ AUDIO READY - showing crankie now');
+                  setCurrentStory(data.story);
+                  setState('playing');
+                }, { once: true });
+                
+                // Timeout fallback - show anyway after 2 seconds
+                setTimeout(() => {
+                  if (state === 'loading') {
+                    console.log('⏰ Timeout - showing crankie anyway');
+                    setCurrentStory(data.story);
+                    setState('playing');
+                  }
+                }, 2000);
+                
               } else {
                 console.error('No panorama');
                 setState('error');
