@@ -69,6 +69,20 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
     }
   };
 
+  const regenerateStory = async (id: string) => {
+    if (!confirm('Re-generate transcript, keywords, and crankie visuals? This may take 60-90 seconds.')) return;
+
+    const response = await fetch(`/api/transcribe/${id}`, {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      alert('Re-generation started! Refresh the page in 60-90 seconds to see results.');
+    } else {
+      alert('Failed to start re-generation. Check console for errors.');
+    }
+  };
+
   const updateKeywords = async (id: string) => {
     const keywords = editKeywords.split(',').map(k => k.trim()).filter(Boolean);
 
@@ -110,6 +124,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
               <th className="text-left p-3">Source</th>
               <th className="text-left p-3">Duration</th>
               <th className="text-left p-3">Keywords</th>
+              <th className="text-left p-3">Crankie</th>
               <th className="text-left p-3">Play Count</th>
               <th className="text-left p-3">Consent</th>
               <th className="text-left p-3">Actions</th>
@@ -181,6 +196,15 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                     </div>
                   )}
                 </td>
+                <td className="p-3">
+                  {story.panorama ? (
+                    <span className="text-xs text-green-600">
+                      ✓ {story.panorama.scenes?.length || 0} scenes
+                    </span>
+                  ) : (
+                    <span className="text-xs text-soot/40">-</span>
+                  )}
+                </td>
                 <td className="p-3">{story.play_count}</td>
                 <td className="p-3">
                   <button
@@ -209,6 +233,13 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                       className="text-amber hover:underline text-xs"
                     >
                       Play
+                    </button>
+                    <button
+                      onClick={() => regenerateStory(story.id)}
+                      className="text-purple-600 hover:underline text-xs font-medium"
+                      title="Re-generate transcript, keywords, and crankie visuals"
+                    >
+                      Re-gen
                     </button>
                     {story.transcript && (
                       <button
