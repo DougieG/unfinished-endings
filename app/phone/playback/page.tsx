@@ -36,43 +36,46 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          console.log('📞 PICKUP - STARTING CRANKIE NOW');
+          console.log('📞 PICKUP');
           setState('loading');
           
-          // Create crankie audio element NOW
+          // Create audio and CALL PLAY() NOW (before src is set)
           const crankieAudio = new Audio();
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          // Fetch story IMMEDIATELY
+          // CRITICAL: Call play() synchronously in gesture - audio will start when src loads
+          console.log('▶️ CALLING PLAY (no src yet)');
+          const playPromise = crankieAudio.play();
+          
+          playPromise
+            .then(() => console.log('✅ Play() accepted by iOS'))
+            .catch(err => console.error('❌ Play() rejected:', err));
+          
+          // Now fetch and set src - audio will start automatically
           fetch('/api/phone/playback/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
             .then(res => res.json())
             .then(data => {
-              console.log('📦 STORY:', data.story.id);
+              console.log('📦 GOT STORY:', data.story.id);
               
               if (data.story.panorama && data.story.audio_url) {
-                console.log('🎵 LOADING:', data.story.audio_url);
+                console.log('🎵 SETTING SRC:', data.story.audio_url);
                 crankieAudio.src = data.story.audio_url;
+                // Audio should start playing automatically now
                 
-                // PLAY IMMEDIATELY
-                crankieAudio.play()
-                  .then(() => {
-                    console.log('✅ PLAYING');
-                    // Set state to show crankie
-                    setCurrentStory(data.story);
-                    setState('playing');
-                  })
-                  .catch(err => console.error('❌ FAILED:', err));
+                setCurrentStory(data.story);
+                setState('playing');
+                console.log('🎬 SHOWING CRANKIE');
               } else {
-                console.error('No panorama data');
+                console.error('No panorama');
                 setState('error');
               }
             })
             .catch(err => {
-              console.error('Fetch failed:', err);
+              console.error('Fetch error:', err);
               setState('error');
             });
         }
