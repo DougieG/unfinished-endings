@@ -91,8 +91,8 @@ export default function CrankiePlayer({
   useEffect(() => {
     const audio = audioRef.current;
     
-    // If we have audio, sync to it
-    if (audio && audioUrl) {
+    // If we have audio (either URL or element), sync to it
+    if (audio && (audioUrl || audioElement)) {
       const updateTime = () => setCurrentTime(audio.currentTime);
       const handlePlay = () => setIsPlaying(true);
       const handlePause = () => setIsPlaying(false);
@@ -115,7 +115,7 @@ export default function CrankiePlayer({
     }
     
     // Otherwise, use timer-based animation
-    if (isPlaying && !audioUrl) {
+    if (isPlaying && !audioUrl && !audioElement) {
       const animate = () => {
         const now = Date.now();
         const delta = (now - lastUpdateRef.current) / 1000; // seconds
@@ -142,7 +142,7 @@ export default function CrankiePlayer({
         }
       };
     }
-  }, [isPlaying, audioUrl, duration]);
+  }, [isPlaying, audioUrl, audioElement, duration, onEnded]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
