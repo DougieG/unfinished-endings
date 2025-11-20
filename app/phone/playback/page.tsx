@@ -193,9 +193,20 @@ export default function PlaybackStation() {
       
       // Load URL into pre-created audio element (maintains user gesture context)
       if (data.story.panorama && data.story.audio_url && crankieAudioRef.current) {
-        console.log('🎵 Loading crankie audio URL:', data.story.audio_url);
+        console.log('🎵 LOADING CRANKIE AUDIO:', data.story.audio_url);
         crankieAudioRef.current.src = data.story.audio_url;
         crankieAudioRef.current.load();
+        console.log('🎵 Audio element ready:', {
+          src: crankieAudioRef.current.src,
+          readyState: crankieAudioRef.current.readyState,
+          paused: crankieAudioRef.current.paused
+        });
+      } else {
+        console.log('⚠️ NOT LOADING AUDIO:', {
+          hasPanorama: !!data.story.panorama,
+          hasUrl: !!data.story.audio_url,
+          hasRef: !!crankieAudioRef.current
+        });
       }
       
       // ONLY play audio manually if there's NO panorama (CrankiePlayer handles it otherwise)
@@ -227,16 +238,27 @@ export default function PlaybackStation() {
   };
 
   const endSession = async () => {
-    console.log('📴 Ending playback session');
-    setState('idle');
-    setCurrentStory(null);
+    console.log('📴 HANGUP - STOPPING ALL AUDIO');
     
-    // Stop audio
+    // Stop crankie audio
+    if (crankieAudioRef.current) {
+      crankieAudioRef.current.pause();
+      crankieAudioRef.current.currentTime = 0;
+      crankieAudioRef.current = null;
+    }
+    
+    // Stop regular story audio
     if (storyAudio.current) {
       storyAudio.current.pause();
+      storyAudio.current.currentTime = 0;
       storyAudio.current = null;
     }
+    
     audioManager.current?.stopPlayback();
+    
+    // Reset state
+    setState('idle');
+    setCurrentStory(null);
 
     // Notify backend
     await fetch('/api/phone/hook', {

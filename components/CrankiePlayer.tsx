@@ -62,18 +62,29 @@ export default function CrankiePlayer({
 
   // Handle autoPlay - SIMPLE AND BULLETPROOF
   useEffect(() => {
-    if (autoPlay && audioRef.current) {
-      const audio = audioRef.current;
-      console.log('🎬 AutoPlay: PLAYING NOW');
-      
-      // Just play - iOS Safari will buffer automatically
+    if (!autoPlay) return;
+    
+    const audio = audioRef.current;
+    console.log('🎬 AUTOPLAY EFFECT:', {
+      hasAudio: !!audio,
+      audioSrc: audio?.src,
+      readyState: audio?.readyState,
+      paused: audio?.paused
+    });
+    
+    if (audio && audio.src) {
+      console.log('▶️ CALLING PLAY');
       audio.play()
-        .then(() => console.log('✅ Playing'))
+        .then(() => console.log('✅ PLAY SUCCESS'))
         .catch(err => {
-          console.error('❌ Play failed:', err);
+          console.error('❌ PLAY FAILED:', err);
           setIsPlaying(true); // Start visual anyway
         });
-    } else if (autoPlay) {
+    } else if (audio) {
+      console.log('⚠️ Audio element exists but no src');
+      setIsPlaying(true);
+    } else {
+      console.log('⚠️ No audio element');
       setIsPlaying(true);
     }
   }, [autoPlay]);
