@@ -4,6 +4,7 @@
 
 import Replicate from 'replicate';
 import { extractNarrativeBeats, beatToSDPrompt, type NarrativeBeat } from './narrative-beats';
+import { getServiceSupabase } from './supabase';
 
 let _replicate: Replicate | null = null;
 function getReplicate(): Replicate {
@@ -13,6 +14,54 @@ function getReplicate(): Replicate {
     });
   }
   return _replicate;
+}
+
+/**
+ * Download image and upload to Supabase Storage for permanent storage
+ */
+async function saveImageToStorage(
+  replicateUrl: string,
+  storyId: string,
+  sequence: number
+): Promise<string> {
+  try {
+    // Download from Replicate
+    const response = await fetch(replicateUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Upload to Supabase Storage
+    const filename = `crankie/${storyId}/scene-${sequence}.png`;
+    const supabase = getServiceSupabase();
+    
+    const { data, error } = await supabase.storage
+      .from('stories')
+      .upload(filename, buffer, {
+        contentType: 'image/png',
+        cacheControl: '31536000', // 1 year
+        upsert: true,
+      });
+    
+    if (error) {
+      console.error(`Failed to upload scene ${sequence}:`, error);
+      return replicateUrl; // Fallback to Replicate URL
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('stories')
+      .getPublicUrl(filename);
+    
+    return urlData.publicUrl;
+    
+  } catch (error) {
+    console.error(`Error saving image ${sequence}:`, error);
+    return replicateUrl; // Fallback to Replicate URL
+  }
 }
 
 export interface CrankieScene {
@@ -79,13 +128,18 @@ export async function generateCrankiePanorama(
         );
         
         if (Array.isArray(output) && output.length > 0) {
-          const imageUrl = output[0] as string;
+          const replicateUrl = output[0] as string;
+          console.log(`      ✅ Generated, saving to storage...`);
+          
+          // Save to Supabase Storage for permanent access
+          const permanentUrl = await saveImageToStorage(replicateUrl, storyId, beat.sequence);
+          
           scenes.push({
             sequence: beat.sequence,
-            image_url: imageUrl,
+            image_url: permanentUrl,
             beat,
           });
-          console.log(`      ✅ Generated`);
+          console.log(`      💾 Saved permanently`);
         } else {
           console.log(`      ⚠️  No image returned`);
         }

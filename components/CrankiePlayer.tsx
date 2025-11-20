@@ -37,10 +37,16 @@ export default function CrankiePlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration] = useState(panorama.scroll_duration);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
+
+  const handleImageError = (sequence: number) => {
+    console.error(`Image failed to load: scene ${sequence}`);
+    setImageErrors(prev => new Set(prev).add(sequence));
+  };
 
   // Calculate scroll position
   const progress = Math.min(currentTime / duration, 1);
@@ -181,15 +187,27 @@ export default function CrankiePlayer({
           {panorama.scenes.map((scene) => (
             <div
               key={scene.sequence}
-              className="h-full flex-shrink-0"
+              className="h-full flex-shrink-0 relative"
               style={{ width: '1024px' }}
             >
-              <img
-                src={scene.image_url}
-                alt={scene.beat.moment}
-                className="w-full h-full object-cover"
-                style={{ imageRendering: 'crisp-edges' }}
-              />
+              {imageErrors.has(scene.sequence) ? (
+                // Fallback display when image fails
+                <div className="w-full h-full flex items-center justify-center bg-soot/20">
+                  <div className="text-center p-8">
+                    <p className="text-soot/60 font-serif text-lg mb-2">{scene.beat.moment}</p>
+                    <p className="text-soot/40 font-sans text-sm italic">{scene.beat.mood}</p>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={scene.image_url}
+                  alt={scene.beat.moment}
+                  className="w-full h-full object-cover"
+                  style={{ imageRendering: 'crisp-edges' }}
+                  onError={() => handleImageError(scene.sequence)}
+                  loading="eager"
+                />
+              )}
             </div>
           ))}
         </motion.div>
@@ -281,11 +299,18 @@ export default function CrankiePlayer({
                   : 'border-soot/20 hover:border-soot/40'
               }`}
             >
-              <img
-                src={scene.image_url}
-                alt={scene.beat.moment}
-                className="w-full h-full object-cover"
-              />
+              {imageErrors.has(scene.sequence) ? (
+                <div className="w-full h-full flex items-center justify-center bg-soot/10">
+                  <p className="text-xs text-soot/40">❌</p>
+                </div>
+              ) : (
+                <img
+                  src={scene.image_url}
+                  alt={scene.beat.moment}
+                  className="w-full h-full object-cover"
+                  onError={() => handleImageError(scene.sequence)}
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-soot/60 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-1">
                 <p className="text-xs text-cardboard font-serif truncate">
