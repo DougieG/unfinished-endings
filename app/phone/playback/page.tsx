@@ -37,18 +37,44 @@ export default function PlaybackStation() {
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
           console.log('📞 PICKUP');
+          setState('loading');
           
           // Create intro audio and play immediately
           const introAudio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
           introAudio.setAttribute('playsinline', '');
           introAudio.play().catch(err => console.error('Intro fail:', err));
           
-          // Create crankie audio element (src loaded later)
+          // Create crankie audio element NOW
           const crankieAudio = new Audio();
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          startSession(introAudio);
+          // Fetch story IMMEDIATELY (while in gesture context)
+          fetch('/api/phone/playback/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+            .then(res => res.json())
+            .then(data => {
+              console.log('📦 Story fetched:', data.story.id);
+              
+              // Load and play crankie audio NOW (still close to gesture)
+              if (data.story.panorama && data.story.audio_url) {
+                console.log('🎵 Loading audio in crankie element');
+                crankieAudio.src = data.story.audio_url;
+                crankieAudio.load();
+                crankieAudio.play()
+                  .then(() => console.log('✅ CRANKIE PLAYING'))
+                  .catch(err => console.error('❌ CRANKIE FAILED:', err));
+              }
+              
+              // Continue with session
+              startSession(introAudio, data);
+            })
+            .catch(err => {
+              console.error('Fetch failed:', err);
+              setState('error');
+            });
         }
       }
     };
@@ -134,10 +160,9 @@ export default function PlaybackStation() {
     });
   };
 
-  const startSession = async (introAudio: HTMLAudioElement) => {
+  const startSession = async (introAudio: HTMLAudioElement, storyData: any) => {
     try {
-      console.log('📞 Starting playback session, audio unlocked:', audioUnlocked);
-      setState('loading');
+      console.log('📞 Starting playback session');
       
       // 1. Register session
       const res = await fetch('/api/phone/hook', {
@@ -148,14 +173,16 @@ export default function PlaybackStation() {
       const data = await res.json();
       if (data.session) sessionId.current = data.session.sessionId;
 
-      // 2. Wait for intro to finish (already playing from user gesture)
+      // 2. Wait for intro to finish
       await new Promise<void>((resolve) => {
         introAudio.onended = () => resolve();
-        introAudio.onerror = () => resolve(); // Continue anyway
+        introAudio.onerror = () => resolve();
       });
 
-      // 3. Get story and play
-      await playRandomStory();
+      // 3. Set story and playing state (audio already playing)
+      setCurrentStory(storyData.story);
+      setState('playing');
+      console.log('🎬 Now displaying crankie');
 
     } catch (err) {
       console.error('Playback start failed', err);
@@ -163,80 +190,9 @@ export default function PlaybackStation() {
     }
   };
 
+  // This function is no longer needed - story fetched in keyup handler
   const playRandomStory = async () => {
-    try {
-      setState('loading');
-      
-      const res = await fetch('/api/phone/playback/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('API error:', res.status, errorText);
-        throw new Error(`No stories available: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      console.log('Story data received:', data);
-      
-      if (!data.story || !data.story.audio_url) {
-        console.error('Invalid story data:', data);
-        throw new Error('No valid story returned');
-      }
-      
-      setCurrentStory(data.story);
-      setState('playing');
-      
-      console.log('Playing story:', data.story.audio_url);
-      console.log('Panorama data:', data.story.panorama);
-      
-      // Load URL into pre-created audio element and START PLAYING immediately
-      if (data.story.panorama && data.story.audio_url && crankieAudioRef.current) {
-        console.log('🎵 LOADING CRANKIE AUDIO:', data.story.audio_url);
-        crankieAudioRef.current.src = data.story.audio_url;
-        crankieAudioRef.current.load();
-        
-        // CRITICAL: Call play() HERE while still in the user gesture call chain
-        console.log('▶️ STARTING PLAYBACK NOW (in gesture context)');
-        crankieAudioRef.current.play()
-          .then(() => console.log('✅ CRANKIE AUDIO PLAYING'))
-          .catch(err => console.error('❌ CRANKIE PLAY FAILED:', err));
-      } else {
-        console.log('⚠️ NOT LOADING AUDIO:', {
-          hasPanorama: !!data.story.panorama,
-          hasUrl: !!data.story.audio_url,
-          hasRef: !!crankieAudioRef.current
-        });
-      }
-      
-      // ONLY play audio manually if there's NO panorama (CrankiePlayer handles it otherwise)
-      if (!data.story.panorama) {
-        storyAudio.current = new Audio(data.story.audio_url);
-        storyAudio.current.setAttribute('playsinline', '');
-        
-        storyAudio.current.onended = async () => {
-          await playClosingMessage();
-          endSession();
-        };
-        
-        storyAudio.current.onerror = (err) => {
-          console.error('Story playback failed', err, storyAudio.current?.error);
-          setState('error');
-        };
-        
-        storyAudio.current.play().catch(err => {
-          console.error('Story play failed', err);
-          setState('error');
-        });
-      }
-      // If panorama exists, CrankiePlayer will use crankieAudioRef
-      
-    } catch (err) {
-      console.error('Fetch story failed', err);
-      setState('error');
-    }
+    console.log('⚠️ playRandomStory called but should not be used anymore');
   };
 
   const endSession = async () => {
