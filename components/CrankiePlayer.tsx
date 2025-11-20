@@ -60,51 +60,23 @@ export default function CrankiePlayer({
     return !nextScene || progress < nextScene.beat.timestamp_percent;
   }) || panorama.scenes[0];
 
-  // Handle autoPlay
+  // Handle autoPlay - SIMPLE AND BULLETPROOF
   useEffect(() => {
     if (autoPlay && audioRef.current) {
       const audio = audioRef.current;
-      console.log('🎬 CrankiePlayer: AutoPlay triggered', { 
-        hasAudio: !!audio, 
-        hasUrl: !!audioUrl, 
-        hasElement: !!audioElement,
-        readyState: audio.readyState,
-        src: audio.src 
-      });
+      console.log('🎬 AutoPlay: PLAYING NOW');
       
-      // Wait for audio to be loaded enough to play
-      const attemptPlay = () => {
-        if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
-          console.log('🎵 Audio ready, playing...');
-          audio.play()
-            .then(() => {
-              console.log('✅ CrankiePlayer: PLAYING');
-            })
-            .catch(err => {
-              console.error('❌ CrankiePlayer: Play failed:', err);
-              setIsPlaying(true); // Start visual anyway
-            });
-        } else {
-          console.log('⏳ Waiting for audio to load, readyState:', audio.readyState);
-          audio.addEventListener('canplay', () => {
-            console.log('🎵 canplay event, attempting play');
-            audio.play()
-              .then(() => console.log('✅ Playing after canplay'))
-              .catch(err => {
-                console.error('❌ Play failed:', err);
-                setIsPlaying(true);
-              });
-          }, { once: true });
-        }
-      };
-      
-      // Small delay to ensure src is loaded
-      setTimeout(attemptPlay, 200);
+      // Just play - iOS Safari will buffer automatically
+      audio.play()
+        .then(() => console.log('✅ Playing'))
+        .catch(err => {
+          console.error('❌ Play failed:', err);
+          setIsPlaying(true); // Start visual anyway
+        });
     } else if (autoPlay) {
-      console.log('🎬 CrankiePlayer: No audio, starting timer-based playback');
       setIsPlaying(true);
     }
-  }, [autoPlay, audioUrl, audioElement]);
+  }, [autoPlay]);
 
   // Animation loop for timer-based playback (when no audio)
   useEffect(() => {

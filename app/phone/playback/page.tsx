@@ -35,23 +35,17 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          console.log('📞 PHONE PICKED UP - Starting session');
+          console.log('📞 PICKUP');
           
-          // CRITICAL: Create BOTH audio elements HERE in user gesture
+          // Create intro audio and play immediately
           const introAudio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
           introAudio.setAttribute('playsinline', '');
-          introAudio.preload = 'auto';
+          introAudio.play().catch(err => console.error('Intro fail:', err));
           
-          // Pre-create crankie audio element (will load URL after fetch)
+          // Create crankie audio element (src loaded later)
           const crankieAudio = new Audio();
           crankieAudio.setAttribute('playsinline', '');
-          crankieAudio.preload = 'auto';
           crankieAudioRef.current = crankieAudio;
-          
-          // Start intro immediately
-          introAudio.play()
-            .then(() => console.log('✅ Intro playing'))
-            .catch(err => console.error('❌ Intro failed:', err));
           
           startSession(introAudio);
         }
