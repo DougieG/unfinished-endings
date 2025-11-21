@@ -11,8 +11,6 @@ type StationState = 'idle' | 'loading' | 'playing' | 'error';
 export default function PlaybackStation() {
   const [state, setState] = useState<StationState>('idle');
   const [currentStory, setCurrentStory] = useState<any>(null);
-  const [showTapToStart, setShowTapToStart] = useState(false);
-  const [storyData, setStoryData] = useState<any>(null);
   
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
@@ -37,10 +35,15 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
-          console.log('📞 PICKUP - fetching story');
+          console.log('📞 PICKUP - starting playback');
           setState('loading');
           
-          // Fetch story first
+          // Create audio element in user gesture
+          const crankieAudio = new Audio();
+          crankieAudio.setAttribute('playsinline', '');
+          crankieAudioRef.current = crankieAudio;
+          
+          // Fetch story and play immediately
           fetch('/api/phone/playback/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -48,9 +51,26 @@ export default function PlaybackStation() {
             .then(res => res.json())
             .then(data => {
               console.log('📦 GOT STORY');
-              console.log('Full story data:', JSON.stringify(data.story, null, 2));
-              setStoryData(data);
-              setShowTapToStart(true); // Show tap prompt
+              
+              if (data.story.panorama && data.story.audio_url) {
+                console.log('🎵 LOADING:', data.story.audio_url);
+                crankieAudio.src = data.story.audio_url;
+                
+                // Play immediately
+                crankieAudio.play()
+                  .then(() => {
+                    console.log('✅ AUTOPLAY SUCCESS');
+                    setCurrentStory(data.story);
+                    setState('playing');
+                  })
+                  .catch(err => {
+                    console.error('❌ Autoplay failed:', err);
+                    setState('error');
+                  });
+              } else {
+                console.error('No panorama data');
+                setState('error');
+              }
             })
             .catch(err => {
               console.error('Fetch error:', err);
@@ -187,102 +207,10 @@ export default function PlaybackStation() {
     sessionId.current = null;
   };
 
-  const handleTapToStart = () => {
-    console.log('👆 TAP RECEIVED');
-    setShowTapToStart(false);
-    
-    console.log('Story data:', {
-      hasData: !!storyData,
-      hasStory: !!storyData?.story,
-      hasPanorama: !!storyData?.story?.panorama,
-      hasAudioUrl: !!storyData?.story?.audio_url,
-      audioUrl: storyData?.story?.audio_url
-    });
-    
-    if (storyData?.story?.panorama && storyData?.story?.audio_url) {
-      // Create and play audio NOW (in tap gesture)
-      console.log('🎵 Creating audio element');
-      const crankieAudio = new Audio();
-      crankieAudio.setAttribute('playsinline', '');
-      
-      // Add event listeners to track loading issues
-      crankieAudio.addEventListener('error', (e) => {
-        console.error('🚨 AUDIO ERROR EVENT:', {
-          error: crankieAudio.error,
-          code: crankieAudio.error?.code,
-          message: crankieAudio.error?.message,
-          src: crankieAudio.src
-        });
-      });
-      
-      crankieAudio.addEventListener('loadstart', () => {
-        console.log('📥 Load started');
-      });
-      
-      crankieAudio.addEventListener('loadedmetadata', () => {
-        console.log('📋 Metadata loaded, duration:', crankieAudio.duration);
-      });
-      
-      crankieAudio.addEventListener('canplay', () => {
-        console.log('✅ Can play, readyState:', crankieAudio.readyState);
-      });
-      
-      crankieAudio.src = storyData.story.audio_url;
-      crankieAudioRef.current = crankieAudio;
-      
-      console.log('▶️ Calling play(), src:', crankieAudio.src);
-      
-      // Test if URL is accessible first
-      fetch(storyData.story.audio_url, { method: 'HEAD' })
-        .then(res => {
-          console.log('🌐 URL check:', {
-            status: res.status,
-            contentType: res.headers.get('content-type'),
-            contentLength: res.headers.get('content-length')
-          });
-        })
-        .catch(err => console.error('🌐 URL fetch failed:', err));
-      
-      crankieAudio.play()
-        .then(() => {
-          console.log('✅ PLAY SUCCEEDED');
-          console.log('Audio state:', {
-            paused: crankieAudio.paused,
-            readyState: crankieAudio.readyState,
-            currentTime: crankieAudio.currentTime
-          });
-          setCurrentStory(storyData.story);
-          setState('playing');
-        })
-        .catch(err => {
-          console.error('❌ PLAY FAILED:', err);
-          console.error('Error details:', JSON.stringify(err, null, 2));
-          // Try showing crankie anyway
-          setCurrentStory(storyData.story);
-          setState('playing');
-        });
-    } else {
-      console.error('⚠️ Missing required data');
-    }
-  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
       <DebugConsole />
-      
-      {/* TAP TO START OVERLAY */}
-      {showTapToStart && (
-        <div 
-          onClick={handleTapToStart}
-          className="fixed inset-0 z-50 bg-black flex items-center justify-center cursor-pointer"
-        >
-          <div className="text-center">
-            <div className="text-8xl mb-8">👆</div>
-            <h1 className="text-6xl font-bold mb-4">TAP TO START</h1>
-            <p className="text-2xl text-gray-400">Story ready to play</p>
-          </div>
-        </div>
-      )}
       {/* Shadow puppet display */}
       {state === 'playing' && currentStory?.panorama && crankieAudioRef.current && (
         <div className="fixed inset-0 z-10 bg-black flex items-center justify-center">
