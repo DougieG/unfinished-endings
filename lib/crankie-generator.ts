@@ -118,7 +118,7 @@ export async function generateCrankiePanorama(
           {
             input: {
               prompt,
-              negative_prompt: "color, colorful, realistic, photograph, modern, text, words, faces, detailed faces, people with faces, logos, watermark, blurry, low quality, vertical composition, interior detail, linework, filigree, ornate patterns, decorative elements, shading, gradients, texture, fine details, complexity, elaborate designs",
+              negative_prompt: "high detail, intricate, detailed textures, ornate decoration, filigree, gradient lighting, rim light, internal cutouts, facial features, clothing details, realistic anatomy, thin delicate shapes, shading, 3D look, complex backgrounds, too many objects, realism, photographic realism, vector crispness, digital clean edges, dramatic shadows, cinematic lighting, depth, perspective, clutter, busy composition, color, colorful, modern, text, words, logos, watermark, blurry, low quality",
               width: 1024,
               height: 768,
               num_outputs: 1,
