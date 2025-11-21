@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Story } from '@/lib/supabase';
 
 interface AdminTableProps {
