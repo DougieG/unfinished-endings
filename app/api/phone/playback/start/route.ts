@@ -37,6 +37,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Additional filter: ensure panorama has scenes
+    const completedStories = stories.filter(s => 
+      s.panorama && 
+      typeof s.panorama === 'object' && 
+      'scenes' in s.panorama &&
+      Array.isArray(s.panorama.scenes) && 
+      s.panorama.scenes.length > 0
+    );
+
+    if (completedStories.length === 0) {
+      return NextResponse.json(
+        { error: 'No completed stories available' },
+        { status: 404 }
+      );
+    }
+
     // Get LRU from request (could be cookie or header)
     // For phone, we track separately to avoid repeating last 3 stories
     const lru = parseLRU(request.headers.get('x-phone-lru') || '[]');
