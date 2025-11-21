@@ -227,12 +227,17 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                   ) : (
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-soot/60">
-                        {story.keywords?.slice(0, 3).join(', ') || '-'}
+                        {(() => {
+                          if (!story.keywords) return '-';
+                          const kw = Array.isArray(story.keywords) ? story.keywords : [story.keywords];
+                          return kw.slice(0, 3).join(', ');
+                        })()}
                       </span>
                       <button
                         onClick={() => {
                           setEditingId(story.id);
-                          setEditKeywords(story.keywords?.join(', ') || '');
+                          const kw = Array.isArray(story.keywords) ? story.keywords : [story.keywords];
+                          setEditKeywords(kw.join(', ') || '');
                         }}
                         className="text-xs text-amber hover:underline"
                       >
