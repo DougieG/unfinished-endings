@@ -49,8 +49,8 @@ export default function PlaybackStation() {
       if (e.repeat) return;
       console.log('Key up (playback):', e.key);
       
-      // Wait for audio config before starting
-      if (!audioConfigLoaded) {
+      // Wait for audio config before starting (check ref, not state)
+      if (!audioConfig.current) {
         console.log('⏳ Waiting for audio config to load...');
         return;
       }
