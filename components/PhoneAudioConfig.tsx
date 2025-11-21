@@ -9,6 +9,7 @@ interface AudioConfig {
   display_name: string;
   description: string | null;
   updated_at: string;
+  metadata?: any;
 }
 
 export default function PhoneAudioConfig() {
