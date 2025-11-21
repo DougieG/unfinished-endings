@@ -123,7 +123,8 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
       }
 
       alert(`Flagged ${result.converted} WebM stories. ${result.note}`);
-      fetchStories(); // Refresh list
+      // Reload page to show updated stories
+      window.location.reload();
     } catch (err) {
       console.error('Error flagging stories:', err);
       alert('Failed to flag stories: ' + (err as Error).message);
