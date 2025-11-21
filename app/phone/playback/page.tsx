@@ -203,10 +203,45 @@ export default function PlaybackStation() {
       console.log('🎵 Creating audio element');
       const crankieAudio = new Audio();
       crankieAudio.setAttribute('playsinline', '');
+      
+      // Add event listeners to track loading issues
+      crankieAudio.addEventListener('error', (e) => {
+        console.error('🚨 AUDIO ERROR EVENT:', {
+          error: crankieAudio.error,
+          code: crankieAudio.error?.code,
+          message: crankieAudio.error?.message,
+          src: crankieAudio.src
+        });
+      });
+      
+      crankieAudio.addEventListener('loadstart', () => {
+        console.log('📥 Load started');
+      });
+      
+      crankieAudio.addEventListener('loadedmetadata', () => {
+        console.log('📋 Metadata loaded, duration:', crankieAudio.duration);
+      });
+      
+      crankieAudio.addEventListener('canplay', () => {
+        console.log('✅ Can play, readyState:', crankieAudio.readyState);
+      });
+      
       crankieAudio.src = storyData.story.audio_url;
       crankieAudioRef.current = crankieAudio;
       
       console.log('▶️ Calling play(), src:', crankieAudio.src);
+      
+      // Test if URL is accessible first
+      fetch(storyData.story.audio_url, { method: 'HEAD' })
+        .then(res => {
+          console.log('🌐 URL check:', {
+            status: res.status,
+            contentType: res.headers.get('content-type'),
+            contentLength: res.headers.get('content-length')
+          });
+        })
+        .catch(err => console.error('🌐 URL fetch failed:', err));
+      
       crankieAudio.play()
         .then(() => {
           console.log('✅ PLAY SUCCEEDED');
