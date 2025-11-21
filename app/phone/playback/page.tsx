@@ -65,8 +65,12 @@ export default function PlaybackStation() {
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          // Fetch story and play immediately
-          fetch('/api/phone/playback/start', {
+          // Play intro message first
+          playIntroMessage().then(() => {
+            console.log('🎵 Intro finished, fetching story...');
+            
+            // Then fetch and play story
+            fetch('/api/phone/playback/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
@@ -98,6 +102,10 @@ export default function PlaybackStation() {
               console.error('Fetch error:', err);
               setState('error');
             });
+          }).catch(err => {
+            console.error('Intro playback error:', err);
+            setState('error');
+          });
         }
       }
     };
@@ -145,6 +153,7 @@ export default function PlaybackStation() {
   const playIntroMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audioUrl = audioConfig.current?.exterior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3';
+      console.log('🎵 Playing EXTERIOR INTRO audio:', audioUrl);
       const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
@@ -168,6 +177,7 @@ export default function PlaybackStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audioUrl = audioConfig.current?.exterior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/ext-post-story.mp3';
+      console.log('🎵 Playing EXTERIOR OUTRO audio:', audioUrl);
       const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
