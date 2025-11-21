@@ -38,7 +38,7 @@ export default function CrankiePlayer({
 }: CrankiePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(panorama.scroll_duration);
+  const [duration, setDuration] = useState(panorama.scroll_duration);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(audioElement || null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,13 +52,20 @@ export default function CrankiePlayer({
 
   // Calculate scroll position
   const progress = Math.min(currentTime / duration, 1);
-  const scrollX = -(progress * panorama.total_width);
   
-  // Find current scene
-  const currentScene = panorama.scenes.find((scene, i) => {
-    const nextScene = panorama.scenes[i + 1];
-    return !nextScene || progress < nextScene.beat.timestamp_percent;
-  }) || panorama.scenes[0];
+  // Calculate scroll to ensure all frames are shown across full duration
+  // Instead of using total_width (which might be based on timestamp_percent),
+  // calculate based on number of scenes to show them all evenly
+  const frameWidth = 1024; // Each scene is 1024px wide
+  const totalScrollableWidth = frameWidth * (panorama.scenes.length - 1);
+  const scrollX = -(progress * totalScrollableWidth);
+  
+  // Find current scene based on even distribution across duration
+  const sceneIndex = Math.min(
+    Math.floor(progress * panorama.scenes.length),
+    panorama.scenes.length - 1
+  );
+  const currentScene = panorama.scenes[sceneIndex] || panorama.scenes[0];
 
   // Handle autoPlay - Monitor if audio is actually playing
   useEffect(() => {
@@ -100,6 +107,13 @@ export default function CrankiePlayer({
       const updateTime = () => {
         setCurrentTime(audio.currentTime);
       };
+      const handleLoadedMetadata = () => {
+        // Use actual audio duration instead of pre-calculated duration
+        if (audio.duration && !isNaN(audio.duration)) {
+          console.log(`🎵 Audio duration: ${audio.duration}s (was ${duration}s)`);
+          setDuration(audio.duration);
+        }
+      };
       const handlePlay = () => {
         console.log('▶️ Audio play event received');
         setIsPlaying(true);
@@ -115,9 +129,15 @@ export default function CrankiePlayer({
       };
 
       audio.addEventListener('timeupdate', updateTime);
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
       audio.addEventListener('play', handlePlay);
       audio.addEventListener('pause', handlePause);
       audio.addEventListener('ended', handleEnded);
+      
+      // Set duration immediately if already loaded
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
       
       console.log('✅ Event listeners attached, current state:', {
         paused: audio.paused,
@@ -127,6 +147,7 @@ export default function CrankiePlayer({
       return () => {
         console.log('🔌 Removing audio event listeners');
         audio.removeEventListener('timeupdate', updateTime);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
         audio.removeEventListener('play', handlePlay);
         audio.removeEventListener('pause', handlePause);
         audio.removeEventListener('ended', handleEnded);
@@ -280,12 +301,12 @@ export default function CrankiePlayer({
             className="absolute top-0 left-0 h-full bg-soot transition-all duration-300"
             style={{ width: `${progress * 100}%` }}
           />
-          {/* Scene markers */}
-          {panorama.scenes.map((scene) => (
+          {/* Scene markers - evenly distributed */}
+          {panorama.scenes.map((scene, index) => (
             <div
               key={scene.sequence}
               className="absolute top-0 h-full w-0.5 bg-amber"
-              style={{ left: `${scene.beat.timestamp_percent * 100}%` }}
+              style={{ left: `${(index / panorama.scenes.length) * 100}%` }}
             />
           ))}
         </div>
@@ -313,12 +334,13 @@ export default function CrankiePlayer({
 
         {/* Scene List */}
         <div className="mt-4 grid grid-cols-7 gap-2">
-          {panorama.scenes.map((scene) => (
+          {panorama.scenes.map((scene, index) => (
             <button
               key={scene.sequence}
               onClick={() => {
                 const audio = audioRef.current;
-                const newTime = scene.beat.timestamp_percent * duration;
+                // Calculate time based on even distribution
+                const newTime = (index / panorama.scenes.length) * duration;
                 
                 if (audio && audioUrl) {
                   audio.currentTime = newTime;
