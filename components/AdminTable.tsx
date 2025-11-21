@@ -107,7 +107,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
   };
 
   const convertWebMStories = async () => {
-    if (!confirm('Flag all WebM audio files as iOS-incompatible? You can filter and re-record them.')) {
+    if (!confirm('DELETE all WebM audio files from database? This cannot be undone. Only iOS-compatible MP4 stories will remain.')) {
       return;
     }
 
@@ -123,7 +123,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
         throw new Error(result.error || 'Failed to flag stories');
       }
 
-      alert(`Flagged ${result.converted} WebM stories. ${result.note}`);
+      alert(`Deleted ${result.deleted} WebM stories. ${result.note}`);
       // Reload page to show updated stories
       window.location.reload();
     } catch (err) {
@@ -153,7 +153,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
               : 'bg-purple-600 hover:bg-purple-700 text-white'
           }`}
         >
-          {converting ? 'Converting...' : ' Convert WebM → MP4'}
+          {converting ? 'Deleting...' : '🗑️ Delete WebM Stories'}
         </button>
         <div className="text-sm text-soot/60">
           {filteredStories.length} of {stories.length} stories

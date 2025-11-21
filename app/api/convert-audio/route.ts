@@ -27,35 +27,26 @@ export async function POST() {
     let converted = 0;
     let failed = 0;
 
-    // For each story, mark it as needing re-recording
-    // We can't convert without FFmpeg, so we'll just flag them
-    for (const story of stories) {
-      try {
-        // Add a note to keywords that this needs re-recording
-        const { error: updateError } = await supabase
-          .from('stories')
-          .update({ 
-            keywords: 'NEEDS_RERECORDING_IOS_INCOMPATIBLE_WEBM'
-          })
-          .eq('id', story.id);
-
-        if (updateError) {
-          console.error(`Failed to update story ${story.id}:`, updateError);
-          failed++;
-        } else {
-          converted++;
-        }
-      } catch (err) {
-        console.error(`Error processing story ${story.id}:`, err);
-        failed++;
-      }
+    // DELETE all WebM stories from database
+    const storyIds = stories.map(s => s.id);
+    
+    const { error: deleteError } = await supabase
+      .from('stories')
+      .delete()
+      .in('id', storyIds);
+    
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
+      return NextResponse.json({ 
+        error: 'Failed to delete WebM stories',
+        details: deleteError
+      }, { status: 500 });
     }
 
     return NextResponse.json({
-      message: `Marked ${converted} stories as needing re-recording`,
-      converted,
-      failed,
-      note: 'WebM stories have been flagged. Please re-record them for iOS compatibility.'
+      message: `Deleted ${storyIds.length} WebM stories from database`,
+      deleted: storyIds.length,
+      note: 'All iOS-incompatible WebM stories have been removed.'
     });
 
   } catch (error) {
