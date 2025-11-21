@@ -17,6 +17,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editKeywords, setEditKeywords] = useState<string>('');
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -80,15 +81,73 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
   const regenerateStory = async (id: string) => {
     if (!confirm('Re-generate transcript, keywords, and crankie visuals? This may take 60-90 seconds.')) return;
 
-    const response = await fetch(`/api/transcribe/${id}`, {
-      method: 'POST',
-    });
+    // Add to regenerating set
+    setRegeneratingIds(prev => new Set(prev).add(id));
 
-    if (response.ok) {
-      alert('Re-generation started! Refresh the page in 60-90 seconds to see results.');
-    } else {
-      alert('Failed to start re-generation. Check console for errors.');
+    try {
+      const response = await fetch(`/api/transcribe/${id}`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Track task progress
+        if (data.taskId) {
+          pollTaskProgress(data.taskId, id);
+        }
+      } else {
+        alert('Failed to start re-generation. Check console for errors.');
+        setRegeneratingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Re-generation error:', error);
+      setRegeneratingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
+  };
+
+  const pollTaskProgress = async (taskId: string, storyId: string) => {
+    const checkProgress = async () => {
+      try {
+        const response = await fetch(`/api/admin/task-progress?taskId=${taskId}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const task = data.task;
+        
+        if (task.status === 'completed') {
+          // Task complete, refresh story data
+          setRegeneratingIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(storyId);
+            return newSet;
+          });
+          // Refresh the page to show updated story
+          window.location.reload();
+        } else if (task.status === 'error') {
+          setRegeneratingIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(storyId);
+            return newSet;
+          });
+          alert('Re-generation failed: ' + (task.error || 'Unknown error'));
+        } else {
+          // Still in progress, check again in 2 seconds
+          setTimeout(checkProgress, 2000);
+        }
+      } catch (error) {
+        console.error('Error polling progress:', error);
+      }
+    };
+    
+    checkProgress();
   };
 
   const downloadAudio = (url: string, id: string) => {
@@ -366,10 +425,15 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                     </button>
                     <button
                       onClick={() => regenerateStory(story.id)}
-                      className="text-purple-600 hover:underline text-xs font-medium"
+                      disabled={regeneratingIds.has(story.id)}
+                      className={`text-xs font-medium ${
+                        regeneratingIds.has(story.id)
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-purple-600 hover:underline'
+                      }`}
                       title="Re-generate transcript, keywords, and crankie visuals"
                     >
-                      Re-gen
+                      {regeneratingIds.has(story.id) ? '⏳ Regenerating...' : 'Re-gen'}
                     </button>
                     {story.transcript && (
                       <button

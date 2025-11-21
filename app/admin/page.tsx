@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getServiceSupabase } from '@/lib/supabase';
 import AdminTable from '@/components/AdminTable';
 import PhoneAudioConfig from '@/components/PhoneAudioConfig';
+import { TaskProgressList } from '@/components/TaskProgressBar';
 import AdminLogin from './AdminLogin';
 
 export default async function AdminPage({
@@ -67,6 +68,9 @@ export default async function AdminPage({
         </div>
         <AdminTable initialStories={stories || []} />
       </div>
+      
+      {/* Progress indicators for active tasks - fixed position bottom right */}
+      <TaskProgressList />
     </div>
   );
 }
