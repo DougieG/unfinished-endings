@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import type { Story } from '@/lib/supabase';
+import SketchManagement from './SketchManagement';
 
 interface AdminTableProps {
   initialStories: Story[];
@@ -302,6 +303,7 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
               <th className="text-left p-3">Duration</th>
               <th className="text-left p-3">Keywords</th>
               <th className="text-left p-3">Crankie</th>
+              <th className="text-left p-3">Sketch</th>
               <th className="text-left p-3">Play Count</th>
               <th className="text-left p-3">Consent</th>
               <th className="text-left p-3">Actions</th>
@@ -386,6 +388,19 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                   ) : (
                     <span className="text-xs text-soot/40">-</span>
                   )}
+                </td>
+                <td className="p-3">
+                  <SketchManagement
+                    storyId={story.id}
+                    currentSketch={{
+                      sketch_original_url: story.sketch_original_url || null,
+                      sketch_processed_url: story.sketch_processed_url || null,
+                      sketch_title: story.sketch_title || null,
+                      sketch_first_name: story.sketch_first_name || null,
+                      has_custom_sketch: story.has_custom_sketch || false
+                    }}
+                    onSketchUploaded={() => window.location.reload()}
+                  />
                 </td>
                 <td className="p-3">{story.play_count}</td>
                 <td className="p-3">

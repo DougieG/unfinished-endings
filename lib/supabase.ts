@@ -33,4 +33,23 @@ export type Story = {
   consent: boolean;
   play_count: number;
   last_played_at: string | null;
+  // Sketch/Form fields
+  sketch_original_url?: string | null;
+  sketch_processed_url?: string | null;
+  sketch_title?: string | null;
+  sketch_first_name?: string | null;
+  sketch_email?: string | null;
+  has_custom_sketch?: boolean;
+  sketch_uploaded_at?: string | null;
+  form_metadata?: {
+    confidence?: {
+      title: number;
+      firstName: number;
+      email: number;
+    };
+    dimensions?: {
+      width: number;
+      height: number;
+    };
+  } | null;
 };
