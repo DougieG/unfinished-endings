@@ -76,7 +76,11 @@ export default function PlaybackStation() {
           })
             .then(res => res.json())
             .then(data => {
-              console.log('📦 GOT STORY');
+              console.log('📦 GOT STORY:', {
+                id: data.story.id,
+                scenes: data.story.panorama?.scenes?.length,
+                firstSceneUrl: data.story.panorama?.scenes?.[0]?.image_url
+              });
               
               if (data.story.panorama && data.story.audio_url) {
                 console.log('🎵 LOADING:', data.story.audio_url);
