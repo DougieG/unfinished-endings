@@ -85,20 +85,25 @@ export async function extractNarrativeBeats(storyText: string): Promise<Narrativ
  * Generate Stable Diffusion prompts from narrative beats
  */
 export function beatToSDPrompt(beat: NarrativeBeat): string {
-  return `SIMPLE BLACK SILHOUETTE CUTOUT, paper shadow puppet style,
-${beat.visual_description},
-${beat.mood} atmosphere,
-SOLID BLACK SHAPES ONLY, completely flat, no details inside shapes,
-PURE WHITE BACKGROUND #FFFFFF, stark high contrast,
-hard edges, hand-cut paper aesthetic,
-ABSOLUTELY NO interior linework, NO decorative patterns, NO filigree,
-NO ornate details whatsoever,
-minimal composition, few elements only,
-clear instantly recognizable silhouette shapes,
-simple handcrafted cutout paper style, like Chinese shadow puppets,
-layered flat black shapes on white,
-horizontal panoramic theatrical composition,
-no text, no faces with features, pure black exterior silhouettes,
-EXTREME HIGH CONTRAST black #000000 on white #FFFFFF,
-like a stencil or logo, completely flat design`;
+  // Override any ornate descriptions with simple silhouette style
+  const simplifiedDescription = beat.visual_description
+    .replace(/ornate|intricate|detailed|elaborate|decorative|filigree/gi, 'simple')
+    .replace(/pattern|texture|shading/gi, 'flat');
+  
+  return `SIMPLE BLACK SILHOUETTE CUTOUT ONLY, paper shadow puppet style,
+showing: ${simplifiedDescription},
+mood: ${beat.mood},
+STYLE REQUIREMENTS (MANDATORY):
+- SOLID BLACK SHAPES ONLY, completely flat, zero interior detail
+- PURE WHITE BACKGROUND #FFFFFF, stark high contrast
+- hard edges, hand-cut paper aesthetic
+- ABSOLUTELY NO: interior linework, decorative patterns, filigree, ornate details
+- minimal composition, 2-4 elements maximum
+- clear instantly recognizable silhouette shapes
+- simple handcrafted cutout paper style, like Chinese shadow puppets or Kara Walker
+- layered flat black shapes on white
+- horizontal panoramic theatrical composition
+- no text, no faces with features, pure black exterior silhouettes only
+- EXTREME HIGH CONTRAST black #000000 on white #FFFFFF
+- like a stencil, logo, or rubber stamp, completely flat minimalist design`;
 }

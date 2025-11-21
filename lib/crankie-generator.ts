@@ -117,13 +117,14 @@ export async function generateCrankiePanorama(
           {
             input: {
               prompt,
-              negative_prompt: "color, colorful, realistic, photograph, modern, text, words, faces, detailed faces, people with faces, logos, watermark, blurry, low quality, vertical composition, interior detail, linework, filigree, ornate patterns, decorative elements, shading, gradients, texture, fine details",
+              negative_prompt: "color, colorful, realistic, photograph, modern, text, words, faces, detailed faces, people with faces, logos, watermark, blurry, low quality, vertical composition, interior detail, linework, filigree, ornate patterns, decorative elements, shading, gradients, texture, fine details, complexity, elaborate designs",
               width: 1024,
               height: 768,
               num_outputs: 1,
               scheduler: "K_EULER",
               num_inference_steps: 30,
               guidance_scale: 10, // Higher = stricter prompt following (was 7.5)
+              seed: 42, // Fixed seed for more consistent silhouette style
             }
           }
         );
