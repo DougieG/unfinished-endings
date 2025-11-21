@@ -28,7 +28,8 @@ export default function PhoneAudioConfig() {
   const fetchConfigs = async () => {
     try {
       const response = await fetch('/api/admin/phone-audio');
-      const data = await response.json();
+      const result = await response.json();
+      const data = result.configs || result; // Handle both formats
       setConfigs(data);
       // Get enable_intros from interior_intro metadata
       const interiorIntro = data.find((c: AudioConfig) => c.config_key === 'interior_intro');
