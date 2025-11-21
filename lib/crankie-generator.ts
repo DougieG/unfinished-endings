@@ -74,7 +74,8 @@ export interface CrankiePanorama {
   story_id: string;
   scenes: CrankieScene[];
   total_width: number;
-  scroll_duration: number; // seconds
+  scroll_duration: number;
+  generated_at?: number;
 }
 
 /**
