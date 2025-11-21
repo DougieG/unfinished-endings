@@ -52,15 +52,17 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
     };
 
     data.forEach((row: any) => {
-      if (row.config_key === 'interior_intro') {
-        config.interior_intro = row.audio_url;
-        // Check enable_intros from interior_intro metadata
-        config.enable_intros = row.metadata?.enable_intros !== false;
-      }
+      if (row.config_key === 'interior_intro') config.interior_intro = row.audio_url;
       if (row.config_key === 'interior_outro') config.interior_outro = row.audio_url;
       if (row.config_key === 'exterior_intro') config.exterior_intro = row.audio_url;
       if (row.config_key === 'exterior_outro') config.exterior_outro = row.audio_url;
     });
+    
+    // Check localStorage for enable_intros (browser-only setting for testing)
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('enable_intros');
+      config.enable_intros = stored !== null ? stored === 'true' : true;
+    }
 
     // Update cache
     cachedConfig = config;

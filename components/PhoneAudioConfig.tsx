@@ -23,6 +23,11 @@ export default function PhoneAudioConfig() {
 
   useEffect(() => {
     fetchConfigs();
+    // Load enable_intros from localStorage
+    const stored = localStorage.getItem('enable_intros');
+    if (stored !== null) {
+      setEnableIntros(stored === 'true');
+    }
   }, []);
 
   const fetchConfigs = async () => {
@@ -31,10 +36,6 @@ export default function PhoneAudioConfig() {
       const result = await response.json();
       const data = result.configs || result; // Handle both formats
       setConfigs(data);
-      // Get enable_intros from interior_intro metadata (default true if not set)
-      const interiorIntro = data.find((c: AudioConfig) => c.config_key === 'interior_intro');
-      const enableValue = interiorIntro?.metadata?.enable_intros;
-      setEnableIntros(enableValue === undefined ? true : enableValue === true);
     } catch (error) {
       console.error('Failed to fetch audio config:', error);
     } finally {
@@ -103,33 +104,12 @@ export default function PhoneAudioConfig() {
     }
   };
 
-  const toggleIntros = async () => {
+  const toggleIntros = () => {
     const newValue = !enableIntros;
-    
-    try {
-      // Update via interior_intro config (stores in metadata)
-      const response = await fetch('/api/admin/phone-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          config_key: 'interior_intro',
-          metadata: { enable_intros: newValue }
-        }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Failed to update:', error);
-        throw new Error('Failed to update');
-      }
-      
-      // Only update state if API succeeded
-      setEnableIntros(newValue);
-      console.log(`✅ Intros ${newValue ? 'enabled' : 'disabled'}`);
-    } catch (error) {
-      console.error('Failed to toggle intros:', error);
-      alert('Failed to update intro setting. Check console for details.');
-    }
+    setEnableIntros(newValue);
+    // Store in localStorage for session persistence
+    localStorage.setItem('enable_intros', String(newValue));
+    console.log(`✅ Intros ${newValue ? 'enabled' : 'disabled'} (local only - resets on page reload)`);
   };
 
   if (loading) {
@@ -144,14 +124,14 @@ export default function PhoneAudioConfig() {
     <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Phone Audio Configuration</h2>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={enableIntros}
             onChange={toggleIntros}
-            className="w-4 h-4"
+            className="w-4 h-4 cursor-pointer"
           />
-          <span>Enable Intro/Outro Audio</span>
+          <span className="text-gray-700">Enable Intro/Outro Audio <span className="text-gray-500">(testing only)</span></span>
         </label>
       </div>
       <p className="text-sm text-gray-600">
