@@ -30,7 +30,7 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
   try {
     const { data, error } = await supabase
       .from('phone_audio_config')
-      .select('config_key, audio_url');
+      .select('config_key, audio_url, metadata');
 
     if (error) {
       console.error('Error fetching phone audio config:', error);
@@ -51,12 +51,15 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
       enable_intros: true, // Default to true
     };
 
-    data.forEach((row) => {
-      if (row.config_key === 'interior_intro') config.interior_intro = row.audio_url;
+    data.forEach((row: any) => {
+      if (row.config_key === 'interior_intro') {
+        config.interior_intro = row.audio_url;
+        // Check enable_intros from interior_intro metadata
+        config.enable_intros = row.metadata?.enable_intros !== false;
+      }
       if (row.config_key === 'interior_outro') config.interior_outro = row.audio_url;
       if (row.config_key === 'exterior_intro') config.exterior_intro = row.audio_url;
       if (row.config_key === 'exterior_outro') config.exterior_outro = row.audio_url;
-      if (row.config_key === 'enable_intros') config.enable_intros = row.metadata?.enable_intros !== false;
     });
 
     // Update cache
