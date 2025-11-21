@@ -187,24 +187,46 @@ export default function PlaybackStation() {
   };
 
   const handleTapToStart = () => {
-    console.log('👆 TAP TO START');
+    console.log('👆 TAP RECEIVED');
     setShowTapToStart(false);
+    
+    console.log('Story data:', {
+      hasData: !!storyData,
+      hasStory: !!storyData?.story,
+      hasPanorama: !!storyData?.story?.panorama,
+      hasAudioUrl: !!storyData?.story?.audio_url,
+      audioUrl: storyData?.story?.audio_url
+    });
     
     if (storyData?.story?.panorama && storyData?.story?.audio_url) {
       // Create and play audio NOW (in tap gesture)
+      console.log('🎵 Creating audio element');
       const crankieAudio = new Audio();
       crankieAudio.setAttribute('playsinline', '');
       crankieAudio.src = storyData.story.audio_url;
       crankieAudioRef.current = crankieAudio;
       
-      console.log('▶️ PLAYING from tap');
+      console.log('▶️ Calling play(), src:', crankieAudio.src);
       crankieAudio.play()
         .then(() => {
-          console.log('✅ SUCCESS');
+          console.log('✅ PLAY SUCCEEDED');
+          console.log('Audio state:', {
+            paused: crankieAudio.paused,
+            readyState: crankieAudio.readyState,
+            currentTime: crankieAudio.currentTime
+          });
           setCurrentStory(storyData.story);
           setState('playing');
         })
-        .catch(err => console.error('❌ Failed:', err));
+        .catch(err => {
+          console.error('❌ PLAY FAILED:', err);
+          console.error('Error details:', JSON.stringify(err, null, 2));
+          // Try showing crankie anyway
+          setCurrentStory(storyData.story);
+          setState('playing');
+        });
+    } else {
+      console.error('⚠️ Missing required data');
     }
   };
 
