@@ -30,7 +30,7 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
   try {
     const { data, error } = await supabase
       .from('phone_audio_config')
-      .select('config_key, audio_url, metadata');
+      .select('config_key, audio_url');
 
     if (error) {
       console.error('Error fetching phone audio config:', error);
