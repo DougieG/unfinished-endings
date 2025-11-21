@@ -106,9 +106,30 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
   };
 
   const convertWebMStories = async () => {
+    if (!confirm('Flag all WebM audio files as iOS-incompatible? You can filter and re-record them.')) {
+      return;
+    }
+
     setConverting(true);
-    // Add logic to convert WebM stories to MP4 here
-    setConverting(false);
+    try {
+      const response = await fetch('/api/convert-audio', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to flag stories');
+      }
+
+      alert(`Flagged ${result.converted} WebM stories. ${result.note}`);
+      fetchStories(); // Refresh list
+    } catch (err) {
+      console.error('Error flagging stories:', err);
+      alert('Failed to flag stories: ' + (err as Error).message);
+    } finally {
+      setConverting(false);
+    }
   };
 
   return (
