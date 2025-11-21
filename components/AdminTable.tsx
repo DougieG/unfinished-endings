@@ -20,10 +20,11 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
 
   const filteredStories = stories.filter(story => {
     const search = searchTerm.toLowerCase();
+    const keywordsArray = Array.isArray(story.keywords) ? story.keywords : [];
     return (
       story.id.toLowerCase().includes(search) ||
       story.transcript?.toLowerCase().includes(search) ||
-      story.keywords?.some(k => k.toLowerCase().includes(search))
+      keywordsArray.some(k => k.toLowerCase().includes(search))
     );
   });
 
