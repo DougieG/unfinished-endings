@@ -11,6 +11,7 @@ export default function RecordingStation() {
   const [state, setState] = useState<StationState>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [duration, setDuration] = useState(0);
+  const [audioConfigLoaded, setAudioConfigLoaded] = useState(false);
   
   // Refs for audio handling
   const audioManager = useRef<PhoneAudioManager | null>(null);
@@ -35,8 +36,11 @@ export default function RecordingStation() {
     getPhoneAudioConfig().then(config => {
       audioConfig.current = config;
       console.log('Phone audio config loaded:', config);
+      setAudioConfigLoaded(true);
     }).catch(err => {
       console.error('Failed to load audio config:', err);
+      // Still allow phone to work with fallback URLs
+      setAudioConfigLoaded(true);
     });
 
     return () => {
@@ -63,6 +67,14 @@ export default function RecordingStation() {
     // OFF HOOK = keyup (button released when phone lifted)
     const handleKeyUp = async (e: KeyboardEvent) => {
       if (e.repeat) return;
+      console.log('Key up:', e.key);
+      
+      // Wait for audio config before starting
+      if (!audioConfigLoaded) {
+        console.log('⏳ Waiting for audio config to load...');
+        return;
+      }
+      
       if (PHONE_CONFIG.recording.offHook.includes(e.code)) {
         if (state === 'idle') {
           startSession();
@@ -91,6 +103,7 @@ export default function RecordingStation() {
   const playWelcomeMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audioUrl = audioConfig.current?.interior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int.phone pre-track.mp3';
+      console.log('🎵 Playing INTRO audio:', audioUrl);
       const audio = new Audio(audioUrl);
       
       audio.onended = () => resolve();
@@ -109,6 +122,7 @@ export default function RecordingStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
       const audioUrl = audioConfig.current?.interior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3';
+      console.log('🎵 Playing OUTRO audio:', audioUrl);
       const audio = new Audio(audioUrl);
       
       audio.onended = () => resolve();

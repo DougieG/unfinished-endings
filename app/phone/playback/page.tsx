@@ -12,6 +12,7 @@ type StationState = 'idle' | 'loading' | 'playing' | 'error';
 export default function PlaybackStation() {
   const [state, setState] = useState<StationState>('idle');
   const [currentStory, setCurrentStory] = useState<any>(null);
+  const [audioConfigLoaded, setAudioConfigLoaded] = useState(false);
   
   const audioManager = useRef<PhoneAudioManager | null>(null);
   const sessionId = useRef<string | null>(null);
@@ -29,8 +30,11 @@ export default function PlaybackStation() {
     getPhoneAudioConfig().then(config => {
       audioConfig.current = config;
       console.log('Phone audio config loaded:', config);
+      setAudioConfigLoaded(true);
     }).catch(err => {
       console.error('Failed to load audio config:', err);
+      // Still allow phone to work with fallback URLs
+      setAudioConfigLoaded(true);
     });
 
     return () => {
@@ -43,6 +47,14 @@ export default function PlaybackStation() {
     // OFF HOOK = keyup (button released when phone lifted)
     const handleKeyUp = async (e: KeyboardEvent) => {
       if (e.repeat) return;
+      console.log('Key up (playback):', e.key);
+      
+      // Wait for audio config before starting
+      if (!audioConfigLoaded) {
+        console.log('⏳ Waiting for audio config to load...');
+        return;
+      }
+      
       if (PHONE_CONFIG.playback.offHook.includes(e.code)) {
         if (state === 'idle') {
           console.log('📞 PICKUP - starting playback');

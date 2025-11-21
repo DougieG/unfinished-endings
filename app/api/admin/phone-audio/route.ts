@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { clearAudioConfigCache } from '@/lib/phone-audio-config';
 
 /**
  * GET /api/admin/phone-audio
@@ -94,6 +95,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    
+    // Clear cache so new audio is used immediately
+    clearAudioConfigCache();
 
     return NextResponse.json({
       success: true,
