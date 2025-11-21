@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const lru = parseLRU(request.headers.get('x-phone-lru') || '[]');
 
     // Select weighted random story (excluding recently played)
-    const story = selectRandomStory(stories as Story[], {
+    const story = selectRandomStory(completedStories as Story[], {
       excludeIds: lru,
       recencyBias: 0.3,
     });
