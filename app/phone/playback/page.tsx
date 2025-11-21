@@ -65,8 +65,9 @@ export default function PlaybackStation() {
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          // Play intro message first (unless disabled for testing)
-          const skipIntro = audioConfig.current?.enable_intros === false;
+          // Play intro message first (unless disabled for testing via localStorage)
+          const enableIntros = localStorage.getItem('enable_intros');
+          const skipIntro = enableIntros === 'false';
           const introPromise = skipIntro ? Promise.resolve() : playIntroMessage();
           
           if (skipIntro) console.log('⏩ Skipping intro (disabled in admin)');
@@ -264,7 +265,8 @@ export default function PlaybackStation() {
               autoPlay={true}
               hideControls={true}
               onEnded={async () => {
-                if (audioConfig.current?.enable_intros !== false) {
+                const enableIntros = localStorage.getItem('enable_intros');
+                if (enableIntros !== 'false') {
                   await playClosingMessage();
                 } else {
                   console.log('⏩ Skipping outro (disabled in admin)');
