@@ -16,16 +16,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Generate unique filename
+    // Generate unique filename with correct extension
     const timestamp = Date.now();
-    const filename = `${timestamp}-${audioFile.name || 'recording.webm'}`;
+    const extension = audioFile.type.includes('mp4') ? 'mp4' : 'webm';
+    const filename = `${timestamp}-${audioFile.name || `recording.${extension}`}`;
 
     // Upload to Supabase Storage
     const arrayBuffer = await audioFile.arrayBuffer();
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError} = await supabase.storage
       .from('stories')
       .upload(filename, arrayBuffer, {
-        contentType: audioFile.type || 'audio/webm',
+        contentType: audioFile.type || 'audio/mp4',
         cacheControl: '3600',
       });
 

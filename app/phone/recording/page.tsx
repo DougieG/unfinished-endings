@@ -145,7 +145,13 @@ export default function RecordingStation() {
 
   const startMediaRecorder = (stream: MediaStream) => {
     audioChunks.current = [];
-    const recorder = new MediaRecorder(stream);
+    
+    // Use audio/mp4 (AAC) which is supported by iOS
+    // Safari doesn't support MP3 encoding, but supports AAC in MP4 container
+    const mimeType = 'audio/mp4';
+    const recorder = new MediaRecorder(stream, { mimeType });
+    
+    console.log('Recording with mimeType:', mimeType);
     
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.current.push(e.data);
@@ -193,7 +199,7 @@ export default function RecordingStation() {
 
   const saveRecording = async () => {
     try {
-      const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
+      const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
       
       if (blob.size < 1000) {
         console.log('Recording too short, discarding');
