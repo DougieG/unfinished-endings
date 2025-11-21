@@ -109,6 +109,7 @@ export async function generateCrankiePanorama(
       
       const prompt = beatToSDPrompt(beat);
       console.log(`      Mood: ${beat.mood} | Position: ${Math.round(beat.timestamp_percent * 100)}%`);
+      console.log(`      PROMPT: ${prompt.substring(0, 100)}...`);
       
       try {
         const output = await getReplicate().run(
@@ -122,7 +123,7 @@ export async function generateCrankiePanorama(
               num_outputs: 1,
               scheduler: "K_EULER",
               num_inference_steps: 30,
-              guidance_scale: 7.5,
+              guidance_scale: 10, // Higher = stricter prompt following (was 7.5)
             }
           }
         );

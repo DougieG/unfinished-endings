@@ -85,19 +85,20 @@ export async function extractNarrativeBeats(storyText: string): Promise<Narrativ
  * Generate Stable Diffusion prompts from narrative beats
  */
 export function beatToSDPrompt(beat: NarrativeBeat): string {
-  return `Simple black silhouette shadow puppet cutout scene,
+  return `SIMPLE BLACK SILHOUETTE CUTOUT, paper shadow puppet style,
 ${beat.visual_description},
 ${beat.mood} atmosphere,
-flat solid black shapes only,
-white background pure #FFFFFF,
-hard edges with slight hand-cut irregularities,
-no interior detail or linework,
-no ornate patterns or filigree,
-minimal surrounding characters and elements,
-instantly recognizable shapes readable from a distance,
-simple handcrafted paper cutout aesthetic,
-layered flat shapes,
-horizontal panoramic composition suitable for crankie theater,
-no text, no realistic faces, pure exterior silhouettes only,
-high contrast black #000000 on white #FFFFFF`;
+SOLID BLACK SHAPES ONLY, completely flat, no details inside shapes,
+PURE WHITE BACKGROUND #FFFFFF, stark high contrast,
+hard edges, hand-cut paper aesthetic,
+ABSOLUTELY NO interior linework, NO decorative patterns, NO filigree,
+NO ornate details whatsoever,
+minimal composition, few elements only,
+clear instantly recognizable silhouette shapes,
+simple handcrafted cutout paper style, like Chinese shadow puppets,
+layered flat black shapes on white,
+horizontal panoramic theatrical composition,
+no text, no faces with features, pure black exterior silhouettes,
+EXTREME HIGH CONTRAST black #000000 on white #FFFFFF,
+like a stencil or logo, completely flat design`;
 }
