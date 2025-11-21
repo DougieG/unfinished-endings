@@ -80,17 +80,26 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Phone Playback] Playing story ${story.id} (${story.duration_s}s)`);
 
-    return NextResponse.json({
-      sessionId: session?.sessionId || 'test-session',
-      phone: 2,
-      story: {
-        id: story.id,
-        audio_url: story.audio_url,
-        duration_s: story.duration_s,
-        keywords: story.keywords,
-        panorama: story.panorama, // Include shadow puppet data
+    return NextResponse.json(
+      {
+        sessionId: session?.sessionId || 'test-session',
+        phone: 2,
+        story: {
+          id: story.id,
+          audio_url: story.audio_url,
+          duration_s: story.duration_s,
+          keywords: story.keywords,
+          panorama: story.panorama, // Include shadow puppet data
+        },
       },
-    });
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
 
   } catch (error) {
     console.error('Error starting phone playback:', error);
