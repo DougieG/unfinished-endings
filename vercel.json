@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/sketch/upload/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

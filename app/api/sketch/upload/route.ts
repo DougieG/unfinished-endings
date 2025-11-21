@@ -51,7 +51,20 @@ export async function POST(request: NextRequest) {
     
     // Process form with OCR
     console.log('🔄 Starting OCR and image extraction...');
-    const extractedData = await processEndingCareForm(buffer);
+    let extractedData;
+    try {
+      extractedData = await processEndingCareForm(buffer);
+      console.log('✅ OCR and extraction complete');
+    } catch (ocrError) {
+      console.error('❌ OCR processing failed:', ocrError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to process form image', 
+          details: ocrError instanceof Error ? ocrError.message : 'Unknown OCR error'
+        },
+        { status: 500 }
+      );
+    }
     
     // Upload images to Supabase Storage
     const supabase = getServiceSupabase();
