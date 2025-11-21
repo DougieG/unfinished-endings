@@ -31,9 +31,10 @@ export default function PhoneAudioConfig() {
       const result = await response.json();
       const data = result.configs || result; // Handle both formats
       setConfigs(data);
-      // Get enable_intros from interior_intro metadata
+      // Get enable_intros from interior_intro metadata (default true if not set)
       const interiorIntro = data.find((c: AudioConfig) => c.config_key === 'interior_intro');
-      setEnableIntros(interiorIntro?.metadata?.enable_intros !== false);
+      const enableValue = interiorIntro?.metadata?.enable_intros;
+      setEnableIntros(enableValue === undefined ? true : enableValue === true);
     } catch (error) {
       console.error('Failed to fetch audio config:', error);
     } finally {
@@ -104,7 +105,6 @@ export default function PhoneAudioConfig() {
 
   const toggleIntros = async () => {
     const newValue = !enableIntros;
-    setEnableIntros(newValue);
     
     try {
       // Update via interior_intro config (stores in metadata)
@@ -117,11 +117,18 @@ export default function PhoneAudioConfig() {
         }),
       });
       
-      if (!response.ok) throw new Error('Failed to update');
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Failed to update:', error);
+        throw new Error('Failed to update');
+      }
+      
+      // Only update state if API succeeded
+      setEnableIntros(newValue);
       console.log(`✅ Intros ${newValue ? 'enabled' : 'disabled'}`);
     } catch (error) {
       console.error('Failed to toggle intros:', error);
-      setEnableIntros(!newValue); // Revert on error
+      alert('Failed to update intro setting. Check console for details.');
     }
   };
 
