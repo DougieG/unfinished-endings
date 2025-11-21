@@ -18,6 +18,8 @@ export default function PlaybackStation() {
   const sessionId = useRef<string | null>(null);
   const storyAudio = useRef<HTMLAudioElement | null>(null);
   const crankieAudioRef = useRef<HTMLAudioElement | null>(null);
+  const introAudioRef = useRef<HTMLAudioElement | null>(null);
+  const outroAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioConfig = useRef<PhoneAudioConfig | null>(null);
 
   useEffect(() => {
@@ -161,9 +163,16 @@ export default function PlaybackStation() {
       const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
-      audio.onended = () => resolve();
+      // Store in ref so it can be stopped on hangup
+      introAudioRef.current = audio;
+      
+      audio.onended = () => {
+        introAudioRef.current = null;
+        resolve();
+      };
       audio.onerror = (err) => {
         console.error('Intro message failed to play', err);
+        introAudioRef.current = null;
         resolve(); // Continue anyway
       };
       
@@ -173,6 +182,7 @@ export default function PlaybackStation() {
         })
         .catch(err => {
           console.error('Audio play failed', err);
+          introAudioRef.current = null;
           resolve(); // Continue anyway
         });
     });
@@ -185,14 +195,22 @@ export default function PlaybackStation() {
       const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
-      audio.onended = () => resolve();
+      // Store in ref so it can be stopped on hangup
+      outroAudioRef.current = audio;
+      
+      audio.onended = () => {
+        outroAudioRef.current = null;
+        resolve();
+      };
       audio.onerror = (err) => {
         console.error('Closing message failed to play', err);
+        outroAudioRef.current = null;
         resolve(); // Continue anyway
       };
       
       audio.play().catch(err => {
         console.error('Audio play failed', err);
+        outroAudioRef.current = null;
         resolve(); // Continue anyway
       });
     });
@@ -210,6 +228,20 @@ export default function PlaybackStation() {
 
   const endSession = async () => {
     console.log('📴 HANGUP - STOPPING ALL AUDIO');
+    
+    // Stop intro audio if playing
+    if (introAudioRef.current) {
+      introAudioRef.current.pause();
+      introAudioRef.current.currentTime = 0;
+      introAudioRef.current = null;
+    }
+    
+    // Stop outro audio if playing
+    if (outroAudioRef.current) {
+      outroAudioRef.current.pause();
+      outroAudioRef.current.currentTime = 0;
+      outroAudioRef.current = null;
+    }
     
     // Stop crankie audio
     if (crankieAudioRef.current) {
