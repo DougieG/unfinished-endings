@@ -85,15 +85,19 @@ export async function extractNarrativeBeats(storyText: string): Promise<Narrativ
  * Generate Stable Diffusion prompts from narrative beats
  */
 export function beatToSDPrompt(beat: NarrativeBeat): string {
-  return `Intricate black paper-cut silhouette shadow puppet scene in the style of Lotte Reiniger,
+  return `Simple black silhouette shadow puppet cutout scene,
 ${beat.visual_description},
 ${beat.mood} atmosphere,
-ornate decorative cutout patterns within the silhouette,
-theatrical composition suitable for crankie theater scroll,
-high contrast black on warm sepia background,
-elegant filigree details,
-German expressionist aesthetic,
-professional shadow puppet art,
-horizontal panoramic composition,
-no text, no realistic faces, pure silhouette form`;
+flat solid black shapes only,
+white background pure #FFFFFF,
+hard edges with slight hand-cut irregularities,
+no interior detail or linework,
+no ornate patterns or filigree,
+minimal surrounding characters and elements,
+instantly recognizable shapes readable from a distance,
+simple handcrafted paper cutout aesthetic,
+layered flat shapes,
+horizontal panoramic composition suitable for crankie theater,
+no text, no realistic faces, pure exterior silhouettes only,
+high contrast black #000000 on white #FFFFFF`;
 }

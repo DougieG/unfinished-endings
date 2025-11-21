@@ -91,6 +91,17 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
     }
   };
 
+  const downloadAudio = (url: string, id: string) => {
+    // Create a temporary anchor element to trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `story-${id.substring(0, 8)}.mp3`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const updateKeywords = async (id: string) => {
     const keywords = editKeywords.split(',').map(k => k.trim()).filter(Boolean);
 
@@ -345,6 +356,13 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
                       className="text-amber hover:underline text-xs"
                     >
                       Play
+                    </button>
+                    <button
+                      onClick={() => downloadAudio(story.audio_url, story.id)}
+                      className="text-blue-600 hover:underline text-xs font-medium"
+                      title="Download audio file"
+                    >
+                      Download
                     </button>
                     <button
                       onClick={() => regenerateStory(story.id)}

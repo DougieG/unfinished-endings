@@ -116,7 +116,7 @@ export async function generateCrankiePanorama(
           {
             input: {
               prompt,
-              negative_prompt: "color, colorful, realistic, photograph, modern, text, words, faces, people, logos, watermark, blurry, low quality, vertical composition",
+              negative_prompt: "color, colorful, realistic, photograph, modern, text, words, faces, detailed faces, people with faces, logos, watermark, blurry, low quality, vertical composition, interior detail, linework, filigree, ornate patterns, decorative elements, shading, gradients, texture, fine details",
               width: 1024,
               height: 768,
               num_outputs: 1,

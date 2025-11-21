@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { PhoneAudioManager } from '@/lib/phone-audio';
 import { PHONE_CONFIG } from '@/lib/phone-config';
+import { getPhoneAudioConfig, type PhoneAudioConfig } from '@/lib/phone-audio-config';
 
 type StationState = 'idle' | 'intro' | 'recording' | 'processing' | 'error';
 
@@ -17,12 +18,25 @@ export default function RecordingStation() {
   const audioChunks = useRef<Blob[]>([]);
   const sessionId = useRef<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const analyser = useRef<AnalyserNode | null>(null);
+  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+  const silenceCheckInterval = useRef<NodeJS.Timeout | null>(null);
+  const audioConfig = useRef<PhoneAudioConfig | null>(null);
 
-  // Initialize audio manager
+  // Initialize audio manager and fetch config
   useEffect(() => {
     audioManager.current = new PhoneAudioManager({
       phone1DeviceName: PHONE_CONFIG.phone1DeviceName,
       phone2DeviceName: PHONE_CONFIG.phone2DeviceName,
+    });
+
+    // Fetch audio configuration
+    getPhoneAudioConfig().then(config => {
+      audioConfig.current = config;
+      console.log('Phone audio config loaded:', config);
+    }).catch(err => {
+      console.error('Failed to load audio config:', err);
     });
 
     return () => {
@@ -32,9 +46,15 @@ export default function RecordingStation() {
 
   const cleanup = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (silenceTimer.current) clearTimeout(silenceTimer.current);
+    if (silenceCheckInterval.current) clearInterval(silenceCheckInterval.current);
     audioManager.current?.cleanup();
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
+    }
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
     }
   };
 
@@ -70,7 +90,8 @@ export default function RecordingStation() {
 
   const playWelcomeMessage = (): Promise<void> => {
     return new Promise((resolve) => {
-      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/Welcome2Record.mp3');
+      const audioUrl = audioConfig.current?.interior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int.phone pre-track.mp3';
+      const audio = new Audio(audioUrl);
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
@@ -87,7 +108,8 @@ export default function RecordingStation() {
 
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
-      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/DoneRecording.mp3');
+      const audioUrl = audioConfig.current?.interior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3';
+      const audio = new Audio(audioUrl);
       
       audio.onended = () => resolve();
       audio.onerror = (err) => {
@@ -164,10 +186,101 @@ export default function RecordingStation() {
       timerRef.current = setInterval(() => {
         setDuration(d => d + 1);
       }, 1000);
+      
+      // Start silence detection
+      startSilenceDetection(stream);
     };
 
     recorder.start(1000); // Slice every second
     mediaRecorder.current = recorder;
+  };
+
+  const startSilenceDetection = (stream: MediaStream) => {
+    try {
+      // Create audio context and analyser
+      const ctx = new AudioContext();
+      const analyzerNode = ctx.createAnalyser();
+      analyzerNode.fftSize = 2048;
+      
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(analyzerNode);
+      
+      audioContext.current = ctx;
+      analyser.current = analyzerNode;
+      
+      // Monitor audio levels
+      const dataArray = new Uint8Array(analyzerNode.frequencyBinCount);
+      const SILENCE_THRESHOLD = 10; // Adjust this value based on testing
+      const SILENCE_DURATION = 4000; // 4 seconds of silence
+      let silenceStart: number | null = null;
+      
+      silenceCheckInterval.current = setInterval(() => {
+        if (!analyser.current) return;
+        
+        analyzerNode.getByteTimeDomainData(dataArray);
+        
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const normalized = Math.abs(dataArray[i] - 128);
+          sum += normalized;
+        }
+        const average = sum / dataArray.length;
+        
+        if (average < SILENCE_THRESHOLD) {
+          // Silence detected
+          if (silenceStart === null) {
+            silenceStart = Date.now();
+            console.log('Silence detected, starting timer...');
+          } else if (Date.now() - silenceStart >= SILENCE_DURATION) {
+            // Silence threshold reached
+            console.log('Silence duration exceeded, stopping recording...');
+            stopRecordingDueToSilence();
+          }
+        } else {
+          // Sound detected, reset silence timer
+          if (silenceStart !== null) {
+            console.log('Sound detected, resetting silence timer');
+            silenceStart = null;
+          }
+        }
+      }, 100); // Check every 100ms
+    } catch (err) {
+      console.error('Failed to setup silence detection:', err);
+    }
+  };
+
+  const stopRecordingDueToSilence = async () => {
+    // Clear intervals
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (silenceCheckInterval.current) clearInterval(silenceCheckInterval.current);
+    
+    setState('processing');
+    setStatusMessage('Saving...');
+
+    // Stop local recording
+    if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
+      mediaRecorder.current.onstop = async () => {
+        await saveRecordingAndPlayOutro();
+      };
+      mediaRecorder.current.stop();
+    }
+
+    // Stop audio stream
+    audioManager.current?.stopRecording();
+
+    // Clean up audio context
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
+    }
+
+    // Notify backend of hook state
+    await fetch('/api/phone/hook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: 1, state: 'recording-complete' }),
+    }).catch(console.error);
   };
 
   const endSession = async () => {
@@ -220,6 +333,40 @@ export default function RecordingStation() {
       });
 
       // Play closing message
+      setStatusMessage('Thank you!');
+      await playClosingMessage();
+
+      resetToIdle();
+    } catch (err) {
+      console.error('Save failed', err);
+      setState('error');
+      setTimeout(resetToIdle, 3000);
+    }
+  };
+
+  const saveRecordingAndPlayOutro = async () => {
+    try {
+      const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
+      
+      if (blob.size < 1000) {
+        console.log('Recording too short, discarding');
+        resetToIdle();
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('audio', blob);
+      if (sessionId.current) {
+        formData.append('sessionId', sessionId.current);
+      }
+
+      // Start saving in the background (non-blocking)
+      fetch('/api/stories', {
+        method: 'POST',
+        body: formData,
+      }).catch(err => console.error('Background save failed:', err));
+
+      // Play closing message immediately
       setStatusMessage('Thank you!');
       await playClosingMessage();
 

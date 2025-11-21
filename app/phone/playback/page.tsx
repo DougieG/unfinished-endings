@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { PhoneAudioManager } from '@/lib/phone-audio';
 import { PHONE_CONFIG } from '@/lib/phone-config';
+import { getPhoneAudioConfig, type PhoneAudioConfig } from '@/lib/phone-audio-config';
 import CrankiePlayer from '@/components/CrankiePlayer';
 import DebugConsole from '@/components/DebugConsole';
 
@@ -16,11 +17,20 @@ export default function PlaybackStation() {
   const sessionId = useRef<string | null>(null);
   const storyAudio = useRef<HTMLAudioElement | null>(null);
   const crankieAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioConfig = useRef<PhoneAudioConfig | null>(null);
 
   useEffect(() => {
     audioManager.current = new PhoneAudioManager({
       phone1DeviceName: PHONE_CONFIG.phone1DeviceName,
       phone2DeviceName: PHONE_CONFIG.phone2DeviceName,
+    });
+
+    // Fetch audio configuration
+    getPhoneAudioConfig().then(config => {
+      audioConfig.current = config;
+      console.log('Phone audio config loaded:', config);
+    }).catch(err => {
+      console.error('Failed to load audio config:', err);
     });
 
     return () => {
@@ -122,7 +132,8 @@ export default function PlaybackStation() {
 
   const playIntroMessage = (): Promise<void> => {
     return new Promise((resolve) => {
-      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3');
+      const audioUrl = audioConfig.current?.exterior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3';
+      const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
       audio.onended = () => resolve();
@@ -144,7 +155,8 @@ export default function PlaybackStation() {
 
   const playClosingMessage = (): Promise<void> => {
     return new Promise((resolve) => {
-      const audio = new Audio('https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/3ThankyePlayback.mp3');
+      const audioUrl = audioConfig.current?.exterior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/ext-post-story.mp3';
+      const audio = new Audio(audioUrl);
       audio.setAttribute('playsinline', ''); // iOS requirement
       
       audio.onended = () => resolve();

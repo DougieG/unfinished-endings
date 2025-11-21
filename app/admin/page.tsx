@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getServiceSupabase } from '@/lib/supabase';
 import AdminTable from '@/components/AdminTable';
+import PhoneAudioConfig from '@/components/PhoneAudioConfig';
 import AdminLogin from './AdminLogin';
 
 export default async function AdminPage({
@@ -53,6 +54,17 @@ export default async function AdminPage({
           </p>
         </div>
 
+        {/* Phone Audio Configuration Section */}
+        <div className="mb-12">
+          <PhoneAudioConfig />
+        </div>
+
+        {/* Stories Management Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-serif text-soot mb-4">
+            Stories Management
+          </h2>
+        </div>
         <AdminTable initialStories={stories || []} />
       </div>
     </div>
