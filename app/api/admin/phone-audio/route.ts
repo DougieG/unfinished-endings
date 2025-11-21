@@ -39,13 +39,37 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const contentType = request.headers.get('content-type');
+    
+    // Handle JSON request (metadata update only)
+    if (contentType?.includes('application/json')) {
+      const body = await request.json();
+      const { config_key, metadata } = body;
+      
+      if (!config_key) {
+        return NextResponse.json({ error: 'config_key required' }, { status: 400 });
+      }
+      
+      const supabase = getServiceSupabase();
+      const { error } = await supabase
+        .from('phone_audio_config')
+        .update({ metadata, updated_at: new Date().toISOString() })
+        .eq('config_key', config_key);
+      
+      if (error) throw error;
+      
+      clearAudioConfigCache();
+      return NextResponse.json({ success: true });
+    }
+    
+    // Handle multipart form data (file upload)
     const formData = await request.formData();
+    const file = formData.get('file') as File;
     const configKey = formData.get('config_key') as string;
-    const audioFile = formData.get('audio') as File;
 
-    if (!configKey || !audioFile) {
+    if (!file || !configKey) {
       return NextResponse.json(
-        { error: 'Missing config_key or audio file' },
+        { error: 'File and config_key are required' },
         { status: 400 }
       );
     }
@@ -54,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Upload audio file to Supabase Storage
     const filename = `phone-audio/${configKey}-${Date.now()}.mp3`;
-    const arrayBuffer = await audioFile.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const { data: uploadData, error: uploadError } = await supabase.storage

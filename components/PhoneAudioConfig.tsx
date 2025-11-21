@@ -16,6 +16,7 @@ export default function PhoneAudioConfig() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [playingUrl, setPlayingUrl] = useState<string | null>(null);
+  const [enableIntros, setEnableIntros] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
@@ -27,9 +28,12 @@ export default function PhoneAudioConfig() {
     try {
       const response = await fetch('/api/admin/phone-audio');
       const data = await response.json();
-      setConfigs(data.configs || []);
+      setConfigs(data);
+      // Get enable_intros from interior_intro metadata
+      const interiorIntro = data.find((c: AudioConfig) => c.config_key === 'interior_intro');
+      setEnableIntros(interiorIntro?.metadata?.enable_intros !== false);
     } catch (error) {
-      console.error('Error fetching configs:', error);
+      console.error('Failed to fetch audio config:', error);
     } finally {
       setLoading(false);
     }
@@ -96,6 +100,29 @@ export default function PhoneAudioConfig() {
     }
   };
 
+  const toggleIntros = async () => {
+    const newValue = !enableIntros;
+    setEnableIntros(newValue);
+    
+    try {
+      // Update via interior_intro config (stores in metadata)
+      const response = await fetch('/api/admin/phone-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config_key: 'interior_intro',
+          metadata: { enable_intros: newValue }
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update');
+      console.log(`✅ Intros ${newValue ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Failed to toggle intros:', error);
+      setEnableIntros(!newValue); // Revert on error
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
@@ -106,12 +133,21 @@ export default function PhoneAudioConfig() {
 
   return (
     <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
-      <div className="mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Phone Audio Configuration</h2>
-        <p className="text-sm text-gray-600">
-          Upload and manage intro/outro audio files for both phones. Files will be automatically used in the installation.
-        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={enableIntros}
+            onChange={toggleIntros}
+            className="w-4 h-4"
+          />
+          <span>Enable Intro/Outro Audio</span>
+        </label>
       </div>
+      <p className="text-sm text-gray-600">
+        Upload and manage intro/outro audio files for both phones. Files will be automatically used in the installation.
+      </p>
 
       <div className="space-y-6">
         {configs.map((config) => (
