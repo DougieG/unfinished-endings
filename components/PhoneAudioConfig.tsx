@@ -17,17 +17,11 @@ export default function PhoneAudioConfig() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [playingUrl, setPlayingUrl] = useState<string | null>(null);
-  const [enableIntros, setEnableIntros] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   useEffect(() => {
     fetchConfigs();
-    // Load enable_intros from localStorage
-    const stored = localStorage.getItem('enable_intros');
-    if (stored !== null) {
-      setEnableIntros(stored === 'true');
-    }
   }, []);
 
   const fetchConfigs = async () => {
@@ -104,14 +98,6 @@ export default function PhoneAudioConfig() {
     }
   };
 
-  const toggleIntros = () => {
-    const newValue = !enableIntros;
-    setEnableIntros(newValue);
-    // Store in localStorage for session persistence
-    localStorage.setItem('enable_intros', String(newValue));
-    console.log(`✅ Intros ${newValue ? 'enabled' : 'disabled'} (local only - resets on page reload)`);
-  };
-
   if (loading) {
     return (
       <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
@@ -122,18 +108,7 @@ export default function PhoneAudioConfig() {
 
   return (
     <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Phone Audio Configuration</h2>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={enableIntros}
-            onChange={toggleIntros}
-            className="w-4 h-4 cursor-pointer"
-          />
-          <span className="text-gray-700">Enable Intro/Outro Audio <span className="text-gray-500">(testing only)</span></span>
-        </label>
-      </div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">Phone Audio Configuration</h2>
       <p className="text-sm text-gray-600">
         Upload and manage intro/outro audio files for both phones. Files will be automatically used in the installation.
       </p>

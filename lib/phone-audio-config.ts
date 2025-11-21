@@ -9,7 +9,6 @@ export interface PhoneAudioConfig {
   interior_outro: string;
   exterior_intro: string;
   exterior_outro: string;
-  enable_intros?: boolean; // Toggle for testing - skip intro/outro if false
 }
 
 let cachedConfig: PhoneAudioConfig | null = null;
@@ -48,7 +47,6 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
       interior_outro: '',
       exterior_intro: '',
       exterior_outro: '',
-      enable_intros: true, // Default to true
     };
 
     data.forEach((row: any) => {
@@ -57,12 +55,6 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
       if (row.config_key === 'exterior_intro') config.exterior_intro = row.audio_url;
       if (row.config_key === 'exterior_outro') config.exterior_outro = row.audio_url;
     });
-    
-    // Check localStorage for enable_intros (browser-only setting for testing)
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('enable_intros');
-      config.enable_intros = stored !== null ? stored === 'true' : true;
-    }
 
     // Update cache
     cachedConfig = config;

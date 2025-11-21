@@ -65,15 +65,9 @@ export default function PlaybackStation() {
           crankieAudio.setAttribute('playsinline', '');
           crankieAudioRef.current = crankieAudio;
           
-          // Play intro message first (unless skip_intro=1 in URL for testing)
-          const urlParams = new URLSearchParams(window.location.search);
-          const skipIntro = urlParams.get('skip_intro') === '1';
-          const introPromise = skipIntro ? Promise.resolve() : playIntroMessage();
-          
-          if (skipIntro) console.log('⏩ Skipping intro (skip_intro=1 in URL)');
-          
-          introPromise.then(() => {
-            if (!skipIntro) console.log('🎵 Intro finished, fetching story...');
+          // Play intro message first
+          playIntroMessage().then(() => {
+            console.log('🎵 Intro finished, fetching story...');
             
             // Then fetch and play story
             fetch('/api/phone/playback/start', {
@@ -265,13 +259,7 @@ export default function PlaybackStation() {
               autoPlay={true}
               hideControls={true}
               onEnded={async () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const skipIntro = urlParams.get('skip_intro') === '1';
-                if (!skipIntro) {
-                  await playClosingMessage();
-                } else {
-                  console.log('⏩ Skipping outro (skip_intro=1 in URL)');
-                }
+                await playClosingMessage();
                 endSession();
               }}
             />
