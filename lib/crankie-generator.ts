@@ -118,14 +118,13 @@ export async function generateCrankiePanorama(
           {
             input: {
               prompt,
-              negative_prompt: "high detail, intricate, detailed textures, ornate decoration, filigree, gradient lighting, rim light, internal cutouts, facial features, clothing details, realistic anatomy, thin delicate shapes, shading, 3D look, complex backgrounds, too many objects, realism, photographic realism, vector crispness, digital clean edges, dramatic shadows, cinematic lighting, depth, perspective, clutter, busy composition, color, colorful, modern, text, words, logos, watermark, blurry, low quality",
+              negative_prompt: "ornate decoration, filigree, lacework, detailed textures, internal cutouts, intricate patterns, decorative elements, realistic faces with features, thin delicate shapes, 3D look, too many objects (more than 4), photographic realism, vector crispness, dramatic shadows, gradient lighting, shading effects, clutter, busy composition, color, colorful, text, words, logos, watermark, blurry, low quality",
               width: 1024,
               height: 768,
               num_outputs: 1,
               scheduler: "K_EULER",
               num_inference_steps: 30,
-              guidance_scale: 10, // Higher = stricter prompt following (was 7.5)
-              seed: 42, // Fixed seed for more consistent silhouette style
+              guidance_scale: 10, // Higher = stricter prompt following
             }
           }
         );

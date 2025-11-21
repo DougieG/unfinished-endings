@@ -22,42 +22,47 @@ export interface NarrativeBeat {
   timestamp_percent: number; // 0.0 to 1.0 (where in story this occurs)
 }
 
-const BEAT_ANALYZER_PROMPT = `You are an expert at analyzing personal narratives and identifying key visual moments for ULTRA-MINIMAL children's shadow puppet theater.
+const BEAT_ANALYZER_PROMPT = `You are an expert at analyzing personal narratives and identifying key visual moments for MINIMAL shadow puppet theater that tells a clear story.
 
 Analyze this story about loss and identify 5-7 KEY VISUAL MOMENTS that would work as scenes in a scrolling shadow puppet panorama (crankie theater).
 
-CRITICAL AESTHETIC CONSTRAINTS:
-- Think like a 5-10 year old cutting shapes from black cardboard with safety scissors
-- EXTREMELY SIMPLE: chunky limbs, blocky heads, rounded or triangular bodies
-- Only 2-4 shapes per scene maximum (tree, person, moon, house)
-- NO interior details, NO decorative elements, NO ornate designs
-- NO filigree, NO texturing, NO lacework, NO complex costumes
-- Simple geometry only: circles, triangles, rectangles, basic curves
-- Props must be iconic silhouettes: one tree, one moon, one hill
-- Hand-cut, imperfect feeling - NOT professional illustration quality
+CRITICAL: Each scene must CLEARLY REPRESENT THE STORY while using simple shapes.
 
 For each moment, provide:
 1. **sequence**: The order (1-7)
 2. **moment**: Brief description of what happens in this beat
-3. **visual_description**: ULTRA-SIMPLE description - describe 2-4 basic BLACK SHAPES ONLY (e.g., "chunky figure standing by round moon", "blocky house with triangular roof", "simple tree with rounded crown next to square figure")
+3. **visual_description**: Describe 2-4 simple BLACK SILHOUETTE SHAPES that CLEARLY SHOW THIS SPECIFIC STORY MOMENT
+   - Be SPECIFIC to the story content (actual objects, people, actions from THIS narrative)
+   - Use simple geometric descriptions BUT make them story-relevant
+   - Examples: 
+     * "Figure holding coffee cup at window, morning light behind"
+     * "Empty wheelchair beside bed, walking cane leaning against wall"
+     * "Two hands reaching toward each other, small gap between"
+     * "Person kneeling by garden with single flower growing"
+
 4. **mood**: Single word emotional tone (melancholic, peaceful, tense, etc.)
 5. **timestamp_percent**: Where in the story this occurs (0.0 = beginning, 1.0 = end)
 
+AESTHETIC CONSTRAINTS (apply to description):
+- Simple chunky silhouette shapes (no fine details)
+- 2-4 main shapes per scene maximum
+- Props should be recognizable but simple (chair, cup, window, tree, etc.)
+- Think cardboard cutouts - but STORY-SPECIFIC cardboard cutouts
+
 Requirements:
-- Start with an establishing scene (setting, atmosphere)
-- Include 3-5 middle beats (key actions, objects, moments)
-- End with a resolution or lingering image
-- Each scene = 2-4 CHUNKY BLACK SHAPES, spaced clearly
-- Focus on BASIC SILHOUETTES: head shapes, body shapes, simple props
-- Think cardboard cutouts taped to chopsticks, NOT professional shadow puppets
+- Start with an establishing scene (WHERE and WHAT)
+- Include 3-5 middle beats (KEY OBJECTS, ACTIONS, RELATIONSHIPS from the story)
+- End with a resolution image
+- Each scene must be INSTANTLY RECOGNIZABLE as depicting THIS SPECIFIC STORY
+- Balance simplicity with narrative clarity
 
 Return ONLY valid JSON:
 {
   "beats": [
     {
       "sequence": 1,
-      "moment": "brief description",
-      "visual_description": "ultra-simple shadow puppet scene with 2-4 basic shapes",
+      "moment": "brief description of story event",
+      "visual_description": "2-4 simple shapes that show this specific moment",
       "mood": "word",
       "timestamp_percent": 0.0
     }
@@ -102,20 +107,15 @@ export function beatToSDPrompt(beat: NarrativeBeat): string {
     .replace(/pattern|texture|shading/gi, 'flat')
     .replace(/complex|rich|delicate/gi, 'basic');
   
-  return `Ultra-minimal handmade shadow puppets on a backlit paper screen. 
-All characters and objects are solid black silhouettes with no internal details,
-as if cut roughly from cardboard by a child. Thick, simple, blocky shapes.
-Imperfect hand-cut edges. Figures on thin stick rods. 
+  return `Shadow puppet scene showing: ${simplifiedDescription}
 
-Showing: ${simplifiedDescription}
-Mood: ${beat.mood}
+STORY MOOD: ${beat.mood}
 
-The scene should look like a small DIY puppet theater: 
-a softly glowing white parchment backdrop, subtle falloff, no gradients, 
-no textures, no shading, no complexity. 
-Only 2–4 silhouettes per scene, spaced clearly, extremely simple. 
-Props and scenery must be basic silhouettes: a round moon, a single tree,
-a hill, a house shape, a simple animal. 
-No decorative elements. No ornate puppet styles. 
-Everything must read as basic paper cutouts placed in front of light.`;
+VISUAL STYLE (apply to above scene):
+Simple black cardboard cutout silhouettes on backlit white screen.
+Hand-cut paper puppet aesthetic - chunky blocky shapes like a child's craft project.
+2-4 solid black shapes, clearly recognizable, storytelling through simple forms.
+Imperfect hand-cut edges, figures on thin rods visible.
+White glowing backdrop, high contrast, no internal details or decorative patterns.
+Focus: Clear visual storytelling with minimal geometric shapes that convey the narrative moment.`;
 }
