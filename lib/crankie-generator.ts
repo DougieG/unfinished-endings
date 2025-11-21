@@ -169,6 +169,7 @@ export async function generateCrankiePanorama(
       scenes,
       total_width: scenes.length * 1024, // Each image is 1024px wide
       scroll_duration: estimatedDuration,
+      generated_at: Date.now(), // Cache-busting version
     };
     
     console.log(`\n   ✨ Crankie panorama complete!`);

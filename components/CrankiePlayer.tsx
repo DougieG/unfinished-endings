@@ -17,6 +17,7 @@ interface CrankiePanorama {
   scenes: CrankieScene[];
   total_width: number;
   scroll_duration: number;
+  generated_at?: number;
 }
 
 interface CrankiePlayerProps {
@@ -255,7 +256,7 @@ export default function CrankiePlayer({
                 </div>
               ) : (
                 <img
-                  src={scene.image_url}
+                  src={`${scene.image_url}?v=${panorama.generated_at || Date.now()}`}
                   alt={scene.beat.moment}
                   className="w-full h-full object-cover"
                   style={{ imageRendering: 'crisp-edges' }}
