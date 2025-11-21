@@ -10,8 +10,13 @@ interface AdminTableProps {
 export default function AdminTable({ initialStories }: AdminTableProps) {
   const [stories, setStories] = useState<Story[]>(initialStories);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editKeywords, setEditKeywords] = useState<string>('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const filteredStories = stories.filter(story => {
     const search = searchTerm.toLowerCase();
@@ -100,16 +105,33 @@ export default function AdminTable({ initialStories }: AdminTableProps) {
     }
   };
 
+  const convertWebMStories = async () => {
+    setConverting(true);
+    // Add logic to convert WebM stories to MP4 here
+    setConverting(false);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="w-full max-w-7xl">
+      <div className="mb-6 flex gap-4 items-center">
         <input
           type="text"
           placeholder="Search stories..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-soot/20 rounded-sm w-96"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        <button
+          onClick={convertWebMStories}
+          disabled={converting}
+          className={`px-6 py-2 rounded-md font-medium ${
+            converting
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 hover:bg-purple-700 text-white'
+          }`}
+        >
+          {converting ? 'Converting...' : ' Convert WebM → MP4'}
+        </button>
         <div className="text-sm text-soot/60">
           {filteredStories.length} of {stories.length} stories
         </div>
