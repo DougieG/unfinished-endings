@@ -48,6 +48,7 @@ export default function PlaybackStation() {
             .then(res => res.json())
             .then(data => {
               console.log('📦 GOT STORY');
+              console.log('Full story data:', JSON.stringify(data.story, null, 2));
               setStoryData(data);
               setShowTapToStart(true); // Show tap prompt
             })
