@@ -6,8 +6,6 @@ export default function RingSpeaker() {
   const [status, setStatus] = useState<'idle' | 'ringing'>('idle');
   const [ipAddress, setIpAddress] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   // Get local IP address on mount
   useEffect(() => {
@@ -34,7 +32,7 @@ export default function RingSpeaker() {
   }, [status]);
 
   const startRinging = async () => {
-    console.log('🔔 Starting ring on iPad 2 speakers');
+    console.log('🔔 Starting ring on speaker');
     setStatus('ringing');
 
     try {
@@ -46,37 +44,26 @@ export default function RingSpeaker() {
 
       console.log('🔔 Ring URL:', ringUrl);
 
-      // Create AudioContext for playback
-      audioContextRef.current = new AudioContext({ sampleRate: 48000 });
+      // Use simple HTML Audio for better mobile compatibility
+      audioRef.current = new Audio(ringUrl);
+      audioRef.current.loop = true;
+      audioRef.current.volume = 1.0;
       
-      // CRITICAL: Resume AudioContext (required on mobile)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-        console.log('✅ AudioContext resumed');
+      // Play and handle promise
+      const playPromise = audioRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('✅ Ring playing through speakers!');
+          })
+          .catch(err => {
+            console.error('❌ Play failed:', err);
+            console.log('Try tapping the Test Ring button again');
+          });
       }
-
-      // Fetch and decode audio
-      const response = await fetch(ringUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-
-      // Create looping source
-      sourceNodeRef.current = audioContextRef.current.createBufferSource();
-      sourceNodeRef.current.buffer = audioBuffer;
-      sourceNodeRef.current.loop = true;
-
-      // Create gain node for LOUD volume
-      const gainNode = audioContextRef.current.createGain();
-      gainNode.gain.value = 1.0; // Full volume
-
-      // Connect and play
-      sourceNodeRef.current.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
-      sourceNodeRef.current.start(0);
-
-      console.log('✅ Ring playing through speakers!');
     } catch (err) {
-      console.error('❌ Ring failed:', err);
+      console.error('❌ Ring setup failed:', err);
     }
   };
 
@@ -84,18 +71,10 @@ export default function RingSpeaker() {
     console.log('🛑 Stopping ring');
     setStatus('idle');
 
-    if (sourceNodeRef.current) {
-      try {
-        sourceNodeRef.current.stop();
-      } catch (e) {
-        // Already stopped
-      }
-      sourceNodeRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
   };
 
