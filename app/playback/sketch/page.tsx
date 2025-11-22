@@ -83,8 +83,18 @@ export default function SimplifiedSketchPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        let errorMessage = 'Upload failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || 'Upload failed';
+          console.error('Server error:', errorData);
+        } catch (e) {
+          // Response wasn't JSON - probably HTML error page
+          const text = await response.text();
+          console.error('Non-JSON error response:', text.substring(0, 200));
+          errorMessage = `Server error (${response.status}): Check function logs`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -95,7 +105,8 @@ export default function SimplifiedSketchPage() {
 
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+      setError(errorMsg);
       setStage('upload');
     } finally {
       setUploading(false);

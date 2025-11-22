@@ -160,12 +160,20 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ Upload error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to process upload',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    
+    // Detailed error info for debugging
+    const errorInfo = {
+      error: 'Failed to process upload',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version
+    };
+    
+    console.error('Full error details:', JSON.stringify(errorInfo, null, 2));
+    
+    return NextResponse.json(errorInfo, { status: 500 });
   }
 }
