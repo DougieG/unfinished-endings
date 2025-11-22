@@ -4,8 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import { PhoneAudioManager } from '@/lib/phone-audio';
 import { PHONE_CONFIG } from '@/lib/phone-config';
 import { getPhoneAudioConfig, type PhoneAudioConfig } from '@/lib/phone-audio-config';
+import { getUploadQueue } from '@/lib/upload-queue';
+import { validateAudioBlob, isOnline } from '@/lib/upload-validator';
 
-type StationState = 'idle' | 'intro' | 'recording' | 'processing' | 'error';
+type StationState = 'idle' | 'intro' | 'recording' | 'processing' | 'error' | 'queued';
 
 export default function RecordingStation() {
   const [state, setState] = useState<StationState>('idle');
@@ -328,23 +330,42 @@ export default function RecordingStation() {
     try {
       const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
       
-      if (blob.size < 1000) {
-        console.log('Recording too short, discarding');
-        resetToIdle();
+      console.log('💾 Saving recording:', {
+        size: blob.size,
+        sizeKB: Math.round(blob.size / 1024),
+        type: blob.type,
+        online: isOnline()
+      });
+      
+      // BULLETPROOF: Validate before upload
+      const validation = await validateAudioBlob(blob);
+      if (!validation.valid) {
+        console.error('❌ Validation failed:', validation.errors);
+        setState('error');
+        setStatusMessage(validation.errors[0] || 'Recording invalid');
+        setTimeout(resetToIdle, 5000);
         return;
       }
-
-      const formData = new FormData();
-      formData.append('audio', blob);
-      if (sessionId.current) {
-        formData.append('sessionId', sessionId.current);
+      
+      if (validation.warnings.length > 0) {
+        console.warn('⚠️ Validation warnings:', validation.warnings);
       }
 
-      // Upload to unified stories endpoint (triggers transcription pipeline)
-      await fetch('/api/stories', {
-        method: 'POST',
-        body: formData,
-      });
+      // BULLETPROOF: Use upload queue for guaranteed delivery
+      const uploadQueue = getUploadQueue();
+      const uploadId = await uploadQueue.enqueue(blob, sessionId.current);
+      
+      console.log(`📦 Recording queued for upload: ${uploadId}`);
+      
+      // Check queue status
+      const queueStatus = uploadQueue.getStatus();
+      console.log('📊 Queue status:', queueStatus);
+      
+      if (!isOnline()) {
+        setState('queued');
+        setStatusMessage('Saved offline. Will upload when connected.');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
 
       // Play closing message
       setStatusMessage('Thank you!');
@@ -352,9 +373,10 @@ export default function RecordingStation() {
 
       resetToIdle();
     } catch (err) {
-      console.error('Save failed', err);
+      console.error('❌ Save failed:', err);
       setState('error');
-      setTimeout(resetToIdle, 3000);
+      setStatusMessage(err instanceof Error ? err.message : 'Upload failed. Will retry automatically.');
+      setTimeout(resetToIdle, 5000);
     }
   };
 
@@ -362,33 +384,41 @@ export default function RecordingStation() {
     try {
       const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
       
-      if (blob.size < 1000) {
-        console.log('Recording too short, discarding');
-        resetToIdle();
+      console.log('💾 Saving recording (background):', {
+        size: blob.size,
+        sizeKB: Math.round(blob.size / 1024),
+        type: blob.type,
+        online: isOnline()
+      });
+      
+      // BULLETPROOF: Validate before upload
+      const validation = await validateAudioBlob(blob);
+      if (!validation.valid) {
+        console.error('❌ Validation failed:', validation.errors);
+        setState('error');
+        setStatusMessage(validation.errors[0] || 'Recording invalid');
+        setTimeout(resetToIdle, 5000);
         return;
       }
 
-      const formData = new FormData();
-      formData.append('audio', blob);
-      if (sessionId.current) {
-        formData.append('sessionId', sessionId.current);
-      }
+      // BULLETPROOF: Use upload queue (non-blocking)
+      const uploadQueue = getUploadQueue();
+      uploadQueue.enqueue(blob, sessionId.current).then(uploadId => {
+        console.log(`📦 Recording queued (background): ${uploadId}`);
+      }).catch(err => {
+        console.error('❌ Queue failed:', err);
+      });
 
-      // Start saving in the background (non-blocking)
-      fetch('/api/stories', {
-        method: 'POST',
-        body: formData,
-      }).catch(err => console.error('Background save failed:', err));
-
-      // Play closing message immediately
+      // Play closing message immediately (don't wait for upload)
       setStatusMessage('Thank you!');
       await playClosingMessage();
 
       resetToIdle();
     } catch (err) {
-      console.error('Save failed', err);
+      console.error('❌ Save failed:', err);
       setState('error');
-      setTimeout(resetToIdle, 3000);
+      setStatusMessage(err instanceof Error ? err.message : 'Upload failed. Will retry automatically.');
+      setTimeout(resetToIdle, 5000);
     }
   };
 
@@ -419,6 +449,7 @@ export default function RecordingStation() {
             </div>
           )}
           {state === 'processing' && <span className="text-blue-400 animate-pulse">Saving...</span>}
+          {state === 'queued' && <span className="text-yellow-400">Queued (offline)</span>}
           {state === 'error' && <span className="text-red-600">Error</span>}
         </div>
 
