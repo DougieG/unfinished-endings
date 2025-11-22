@@ -6,6 +6,7 @@ export default function RingSpeaker() {
   const [status, setStatus] = useState<'idle' | 'ringing'>('idle');
   const [ipAddress, setIpAddress] = useState('');
   const [audioReady, setAudioReady] = useState(false);
+  const [activationStatus, setActivationStatus] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Set IP address on mount
@@ -40,40 +41,49 @@ export default function RingSpeaker() {
 
   const activateAudio = async () => {
     console.log('🔓 Activating audio...');
+    setActivationStatus('Playing silent audio to unlock...');
     
     try {
       // STEP 1: Play a silent audio to unlock iOS audio (CRITICAL!)
-      // Use data URL for instant playback - no network delay
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
       silentAudio.volume = 0.1;
-      await silentAudio.play();
-      console.log('✅ Audio unlocked with silent play');
       
-      // STEP 2: Now load the actual ring audio
-      const configResponse = await fetch('/api/admin/phone-audio');
-      const configData = await configResponse.json();
-      const ringUrl = configData.configs?.find((c: any) => c.config_key === 'ring_tone')?.audio_url 
-        || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-
+      try {
+        await silentAudio.play();
+        console.log('✅ Audio unlocked with silent play');
+        setActivationStatus('Audio unlocked! Loading ring...');
+      } catch (playErr) {
+        console.error('Silent play failed:', playErr);
+        setActivationStatus('Silent play blocked - retrying...');
+        // Try again
+        await silentAudio.play();
+      }
+      
+      // STEP 2: Load the ring audio
+      setActivationStatus('Fetching ring audio URL...');
+      const ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
       console.log('🔔 Loading ring audio:', ringUrl);
 
-      // Create and preload the ring audio
+      // Create the ring audio
+      setActivationStatus('Creating audio element...');
       audioRef.current = new Audio(ringUrl);
       audioRef.current.loop = true;
       audioRef.current.volume = 1.0;
-      audioRef.current.preload = 'auto';
       
-      // Wait for it to be ready
-      await new Promise((resolve) => {
-        audioRef.current!.addEventListener('canplaythrough', resolve, { once: true });
-        audioRef.current!.load();
-      });
+      // Try to load it
+      setActivationStatus('Loading audio file...');
+      audioRef.current.load();
       
+      // Give it a moment
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setActivationStatus('');
       setAudioReady(true);
       console.log('✅ Audio ready! System can now ring.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Audio activation failed:', err);
-      alert('Audio activation failed. Check console.');
+      setActivationStatus(`ERROR: ${err.message}`);
+      alert(`Audio activation failed: ${err.message}`);
     }
   };
 
@@ -161,10 +171,16 @@ export default function RingSpeaker() {
             </div>
             <button
               onClick={activateAudio}
-              className="px-8 py-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg font-bold text-xl"
+              disabled={activationStatus !== ''}
+              className="px-8 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-600 text-black rounded-lg font-bold text-xl"
             >
               🔓 TAP HERE TO ACTIVATE AUDIO
             </button>
+            {activationStatus && (
+              <div className="text-blue-400 text-lg font-semibold animate-pulse">
+                {activationStatus}
+              </div>
+            )}
             <div className="text-sm text-gray-600">
               Mobile browsers require a tap to unlock audio playback.
               <br />
