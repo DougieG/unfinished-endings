@@ -27,6 +27,8 @@ export default function RecordingStation() {
   const silenceCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const audioConfig = useRef<PhoneAudioConfig | null>(null);
   const ringAudio = useRef<HTMLAudioElement | null>(null);
+  const ringAudioContext = useRef<AudioContext | null>(null);
+  const ringSourceNode = useRef<AudioBufferSourceNode | null>(null);
 
   // Initialize audio manager and fetch config
   useEffect(() => {
@@ -55,10 +57,21 @@ export default function RecordingStation() {
     if (timerRef.current) clearInterval(timerRef.current);
     if (silenceTimer.current) clearTimeout(silenceTimer.current);
     if (silenceCheckInterval.current) clearInterval(silenceCheckInterval.current);
-    if (ringAudio.current) {
-      ringAudio.current.pause();
-      ringAudio.current = null;
+    
+    // Clean up ring AudioContext
+    if (ringSourceNode.current) {
+      try {
+        ringSourceNode.current.stop();
+      } catch (e) {
+        // Already stopped
+      }
+      ringSourceNode.current = null;
     }
+    if (ringAudioContext.current) {
+      ringAudioContext.current.close();
+      ringAudioContext.current = null;
+    }
+    
     audioManager.current?.cleanup();
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
@@ -178,81 +191,74 @@ export default function RecordingStation() {
     setState('ringing');
     setStatusMessage('Phone is ringing - pick up to hear message');
     
-    // Play ring tone on loop through iPad speakers (NOT phone device)
-    const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-    console.log('🔔 Playing RING through iPad/laptop speakers (NOT phone):', ringUrl);
-    
-    ringAudio.current = new Audio(ringUrl);
-    ringAudio.current.loop = true;
-    ringAudio.current.volume = 1.0; // Full volume for iPad speakers
-    
-    // CRITICAL: Find built-in speakers and route ring there, NOT to phone
     try {
-      if ('setSinkId' in ringAudio.current) {
-        // Get all audio output devices
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-        
-        console.log('🔊 Available audio outputs:', audioOutputs.map(d => ({
-          id: d.deviceId,
-          label: d.label
-        })));
-        
-        // Find built-in speakers (NOT the phone device)
-        // Look for device that is NOT "Native Union POP Phone"
-        const builtInSpeaker = audioOutputs.find(d => 
-          !d.label.includes('Native Union') && 
-          !d.label.includes('POP Phone') &&
-          (d.label.includes('Built-in') || d.label.includes('Default') || d.deviceId === 'default')
-        );
-        
-        if (builtInSpeaker) {
-          await (ringAudio.current as any).setSinkId(builtInSpeaker.deviceId);
-          console.log('✅ Ring set to built-in speakers:', builtInSpeaker.label);
-        } else {
-          // Fallback to default (first device that's not the phone)
-          const firstNonPhone = audioOutputs.find(d => !d.label.includes('Native Union'));
-          if (firstNonPhone) {
-            await (ringAudio.current as any).setSinkId(firstNonPhone.deviceId);
-            console.log('✅ Ring set to:', firstNonPhone.label);
-          } else {
-            await (ringAudio.current as any).setSinkId('');
-            console.log('⚠️ Using default speakers');
-          }
-        }
+      const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+      console.log('🔔 Setting up DEDICATED AudioContext for ring on built-in speakers');
+      
+      // Create a DEDICATED AudioContext for ring ONLY
+      ringAudioContext.current = new AudioContext({ sampleRate: 48000 });
+      
+      // Find built-in speakers (NOT the phone)
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+      
+      console.log('🔊 Available outputs:', audioOutputs.map(d => d.label));
+      
+      const builtInSpeaker = audioOutputs.find(d => 
+        !d.label.includes('Native Union') && 
+        !d.label.includes('POP Phone') &&
+        d.label.includes('Built-in')
+      );
+      
+      // Set this AudioContext to output to built-in speakers ONLY
+      if (builtInSpeaker && 'setSinkId' in ringAudioContext.current) {
+        await (ringAudioContext.current as any).setSinkId(builtInSpeaker.deviceId);
+        console.log('✅ Ring AudioContext routed to:', builtInSpeaker.label);
       } else {
-        console.log('⚠️ setSinkId not supported, ring will use browser default');
+        console.warn('⚠️ Could not set ring to built-in speakers, using default');
       }
+      
+      // Fetch and decode ring audio
+      const response = await fetch(ringUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ringAudioContext.current.decodeAudioData(arrayBuffer);
+      
+      // Create a looping source
+      ringSourceNode.current = ringAudioContext.current.createBufferSource();
+      ringSourceNode.current.buffer = audioBuffer;
+      ringSourceNode.current.loop = true; // Loop the ring
+      
+      // Create gain node for volume control
+      const gainNode = ringAudioContext.current.createGain();
+      gainNode.gain.value = 1.0; // Full volume
+      
+      // Connect: source -> gain -> output (built-in speakers)
+      ringSourceNode.current.connect(gainNode);
+      gainNode.connect(ringAudioContext.current.destination);
+      
+      // Start playing the ring
+      ringSourceNode.current.start(0);
+      console.log('✅ Ring playing through dedicated AudioContext on built-in speakers!');
+      
     } catch (err) {
-      console.warn('⚠️ Could not set output device:', err);
+      console.error('❌ Ring setup failed:', err);
+      setState('ringing'); // Still show visual ring
     }
-    
-    ringAudio.current.oncanplaythrough = () => {
-      console.log('✅ Ring audio loaded and ready');
-    };
-    
-    ringAudio.current.onerror = (err) => {
-      console.error('❌ Ring audio failed to load:', err);
-    };
-    
-    ringAudio.current.play()
-      .then(() => {
-        console.log('✅ Ring playing!');
-      })
-      .catch(err => {
-        console.error('❌ Ring playback failed:', err);
-        console.log('Autoplay might be blocked - ring will show visually');
-      });
   };
 
   const answerForOutro = async () => {
     console.log('📞 Answered ringing phone - playing outro...');
     
-    // Stop ring
-    if (ringAudio.current) {
-      ringAudio.current.pause();
-      ringAudio.current = null;
+    // Stop ring AudioContext
+    if (ringSourceNode.current) {
+      ringSourceNode.current.stop();
+      ringSourceNode.current = null;
     }
+    if (ringAudioContext.current) {
+      ringAudioContext.current.close();
+      ringAudioContext.current = null;
+    }
+    console.log('✅ Ring stopped');
     
     setState('outro');
     setStatusMessage('Playing message...');
@@ -648,42 +654,49 @@ export default function RecordingStation() {
         {state === 'idle' && (
           <button
             onClick={async () => {
-              const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-              console.log('🧪 TEST: Playing ring through built-in speakers (NOT phone)');
-              const testAudio = new Audio(ringUrl);
-              testAudio.volume = 1.0;
-              
-              // Find and use built-in speakers
               try {
-                if ('setSinkId' in testAudio) {
-                  const devices = await navigator.mediaDevices.enumerateDevices();
-                  const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-                  console.log('🧪 TEST: Available outputs:', audioOutputs.map(d => d.label));
-                  
-                  const builtInSpeaker = audioOutputs.find(d => 
-                    !d.label.includes('Native Union') && 
-                    !d.label.includes('POP Phone') &&
-                    (d.label.includes('Built-in') || d.label.includes('Default') || d.deviceId === 'default')
-                  );
-                  
-                  if (builtInSpeaker) {
-                    await (testAudio as any).setSinkId(builtInSpeaker.deviceId);
-                    console.log('✅ TEST: Using', builtInSpeaker.label);
-                  } else {
-                    const firstNonPhone = audioOutputs.find(d => !d.label.includes('Native Union'));
-                    if (firstNonPhone) {
-                      await (testAudio as any).setSinkId(firstNonPhone.deviceId);
-                      console.log('✅ TEST: Using', firstNonPhone.label);
-                    }
-                  }
+                const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+                console.log('🧪 TEST: Creating dedicated AudioContext for ring');
+                
+                // Create dedicated test AudioContext
+                const testContext = new AudioContext({ sampleRate: 48000 });
+                
+                // Find built-in speakers
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                console.log('🧪 TEST: Available outputs:', audioOutputs.map(d => d.label));
+                
+                const builtInSpeaker = audioOutputs.find(d => 
+                  !d.label.includes('Native Union') && 
+                  !d.label.includes('POP Phone') &&
+                  d.label.includes('Built-in')
+                );
+                
+                if (builtInSpeaker && 'setSinkId' in testContext) {
+                  await (testContext as any).setSinkId(builtInSpeaker.deviceId);
+                  console.log('✅ TEST: AudioContext routed to:', builtInSpeaker.label);
                 }
+                
+                // Fetch and play
+                const response = await fetch(ringUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await testContext.decodeAudioData(arrayBuffer);
+                
+                const source = testContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(testContext.destination);
+                source.start(0);
+                
+                console.log('✅ TEST: Ring playing through Web Audio API!');
+                
+                // Auto-cleanup after playback
+                source.onended = () => {
+                  testContext.close();
+                  console.log('🧪 TEST: Playback complete, context closed');
+                };
               } catch (err) {
-                console.warn('⚠️ TEST: Device selection failed:', err);
+                console.error('❌ TEST: Failed:', err);
               }
-              
-              testAudio.play()
-                .then(() => console.log('✅ TEST: Ring playing!'))
-                .catch(err => console.error('❌ TEST: Failed:', err));
             }}
             className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
           >
