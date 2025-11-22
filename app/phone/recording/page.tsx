@@ -483,9 +483,13 @@ export default function RecordingStation() {
 
   const saveRecording = async () => {
     try {
+      // START RINGING IMMEDIATELY! Don't wait for upload
+      console.log('🔔 Starting ring IMMEDIATELY (before save)');
+      startRinging();
+      
       const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
       
-      console.log('💾 Saving recording:', {
+      console.log('💾 Saving recording (in background):', {
         size: blob.size,
         sizeKB: Math.round(blob.size / 1024),
         type: blob.type,
@@ -496,9 +500,7 @@ export default function RecordingStation() {
       const validation = await validateAudioBlob(blob);
       if (!validation.valid) {
         console.error('❌ Validation failed:', validation.errors);
-        setState('error');
-        setStatusMessage(validation.errors[0] || 'Recording invalid');
-        setTimeout(resetToIdle, 5000);
+        // Don't show error - ring is already happening
         return;
       }
       
@@ -506,26 +508,13 @@ export default function RecordingStation() {
         console.warn('⚠️ Validation warnings:', validation.warnings);
       }
 
-      // BULLETPROOF: Use upload queue for guaranteed delivery
+      // BULLETPROOF: Use upload queue for guaranteed delivery (background)
       const uploadQueue = getUploadQueue();
-      const uploadId = await uploadQueue.enqueue(blob, sessionId.current);
-      
-      console.log(`📦 Recording queued for upload: ${uploadId}`);
-      
-      // Check queue status
-      const queueStatus = uploadQueue.getStatus();
-      console.log('📊 Queue status:', queueStatus);
-      
-      if (!isOnline()) {
-        setState('queued');
-        setStatusMessage('Saved offline. Will upload when connected.');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-
-      // Recording saved! Now make phone ring for outro
-      setStatusMessage('Recording saved!');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
-      startRinging();
+      uploadQueue.enqueue(blob, sessionId.current).then(uploadId => {
+        console.log(`📦 Recording queued for upload: ${uploadId}`);
+      }).catch(err => {
+        console.error('❌ Queue failed:', err);
+      });
     } catch (err) {
       console.error('❌ Save failed:', err);
       setState('error');
@@ -536,6 +525,10 @@ export default function RecordingStation() {
 
   const saveRecordingAndPlayOutro = async () => {
     try {
+      // START RINGING IMMEDIATELY! Don't wait for upload
+      console.log('🔔 Starting ring IMMEDIATELY (silence detected, before save)');
+      startRinging();
+      
       const blob = new Blob(audioChunks.current, { type: 'audio/mp4' });
       
       console.log('💾 Saving recording (background):', {
@@ -549,9 +542,7 @@ export default function RecordingStation() {
       const validation = await validateAudioBlob(blob);
       if (!validation.valid) {
         console.error('❌ Validation failed:', validation.errors);
-        setState('error');
-        setStatusMessage(validation.errors[0] || 'Recording invalid');
-        setTimeout(resetToIdle, 5000);
+        // Don't show error - ring is already happening
         return;
       }
 
@@ -562,11 +553,6 @@ export default function RecordingStation() {
       }).catch(err => {
         console.error('❌ Queue failed:', err);
       });
-
-      // Recording saved in background! Now make phone ring for outro
-      setStatusMessage('Recording saved!');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
-      startRinging();
     } catch (err) {
       console.error('❌ Save failed:', err);
       setState('error');
