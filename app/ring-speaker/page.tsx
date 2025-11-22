@@ -8,11 +8,13 @@ export default function RingSpeaker() {
   const [audioReady, setAudioReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Get local IP address on mount
+  // Set IP address on mount
   useEffect(() => {
-    // Display network info
     setIpAddress(window.location.hostname);
+  }, []);
 
+  // Poll for ring commands
+  useEffect(() => {
     // Poll for ring commands every 500ms (only if audio is ready)
     if (!audioReady) {
       return; // Don't poll until audio is activated
@@ -40,7 +42,14 @@ export default function RingSpeaker() {
     console.log('🔓 Activating audio...');
     
     try {
-      // Get ring tone URL
+      // STEP 1: Play a silent audio to unlock iOS audio (CRITICAL!)
+      // Use data URL for instant playback - no network delay
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      silentAudio.volume = 0.1;
+      await silentAudio.play();
+      console.log('✅ Audio unlocked with silent play');
+      
+      // STEP 2: Now load the actual ring audio
       const configResponse = await fetch('/api/admin/phone-audio');
       const configData = await configResponse.json();
       const ringUrl = configData.configs?.find((c: any) => c.config_key === 'ring_tone')?.audio_url 
@@ -48,18 +57,23 @@ export default function RingSpeaker() {
 
       console.log('🔔 Loading ring audio:', ringUrl);
 
-      // Create audio element and load it (this unlocks audio on mobile)
+      // Create and preload the ring audio
       audioRef.current = new Audio(ringUrl);
       audioRef.current.loop = true;
       audioRef.current.volume = 1.0;
+      audioRef.current.preload = 'auto';
       
-      // Load the audio file
-      await audioRef.current.load();
+      // Wait for it to be ready
+      await new Promise((resolve) => {
+        audioRef.current!.addEventListener('canplaythrough', resolve, { once: true });
+        audioRef.current!.load();
+      });
       
       setAudioReady(true);
       console.log('✅ Audio ready! System can now ring.');
     } catch (err) {
       console.error('❌ Audio activation failed:', err);
+      alert('Audio activation failed. Check console.');
     }
   };
 
