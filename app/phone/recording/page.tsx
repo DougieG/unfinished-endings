@@ -156,9 +156,9 @@ export default function RecordingStation() {
     setState('ringing');
     setStatusMessage('Phone is ringing - pick up to hear message');
     
-    // Play ring tone on loop
-    // Using standard phone ring URL - replace with custom if available
-    const ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+    // Play ring tone on loop from admin-configured audio
+    const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+    console.log('🔔 Playing RING audio:', ringUrl);
     ringAudio.current = new Audio(ringUrl);
     ringAudio.current.loop = true;
     ringAudio.current.volume = 0.7;

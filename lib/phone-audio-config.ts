@@ -9,6 +9,7 @@ export interface PhoneAudioConfig {
   interior_outro: string;
   exterior_intro: string;
   exterior_outro: string;
+  ring_tone: string;
 }
 
 let cachedConfig: PhoneAudioConfig | null = null;
@@ -47,6 +48,7 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
       interior_outro: '',
       exterior_intro: '',
       exterior_outro: '',
+      ring_tone: '',
     };
 
     data.forEach((row: any) => {
@@ -54,6 +56,7 @@ export async function getPhoneAudioConfig(): Promise<PhoneAudioConfig> {
       if (row.config_key === 'interior_outro') config.interior_outro = row.audio_url;
       if (row.config_key === 'exterior_intro') config.exterior_intro = row.audio_url;
       if (row.config_key === 'exterior_outro') config.exterior_outro = row.audio_url;
+      if (row.config_key === 'ring_tone') config.ring_tone = row.audio_url;
     });
 
     // Update cache
@@ -76,6 +79,7 @@ function getDefaultConfig(): PhoneAudioConfig {
     interior_outro: 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3',
     exterior_intro: 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/1Listening.mp3',
     exterior_outro: 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/ext-post-story.mp3',
+    ring_tone: 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3',
   };
 }
 
