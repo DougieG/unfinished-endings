@@ -269,12 +269,18 @@ export default function SimplifiedSketchPage() {
               <CrankiePlayer
                 panorama={{
                   scenes: [{
+                    sequence: 0,
                     image_url: result.processedSketchUrl,
-                    duration_s: 5,
-                    camera_movement: { type: 'static' as const }
-                  }]
+                    beat: {
+                      moment: 'memory',
+                      mood: 'peaceful',
+                      timestamp_percent: 0
+                    }
+                  }],
+                  total_width: 1024,
+                  scroll_duration: 5
                 }}
-                autoplay={true}
+                autoPlay={true}
               />
 
               <div className="mt-4 flex gap-2">
