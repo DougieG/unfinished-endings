@@ -186,19 +186,45 @@ export default function RecordingStation() {
     ringAudio.current.loop = true;
     ringAudio.current.volume = 1.0; // Full volume for iPad speakers
     
-    // CRITICAL: Force ring to play through default system speakers, NOT phone device
-    // This prevents the browser from routing the ring to the phone handset
+    // CRITICAL: Find built-in speakers and route ring there, NOT to phone
     try {
-      // Check if setSinkId is supported (Chrome/Edge)
       if ('setSinkId' in ringAudio.current) {
-        // Set to empty string = default system speakers
-        await (ringAudio.current as any).setSinkId('');
-        console.log('✅ Ring explicitly set to use default system speakers');
+        // Get all audio output devices
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+        
+        console.log('🔊 Available audio outputs:', audioOutputs.map(d => ({
+          id: d.deviceId,
+          label: d.label
+        })));
+        
+        // Find built-in speakers (NOT the phone device)
+        // Look for device that is NOT "Native Union POP Phone"
+        const builtInSpeaker = audioOutputs.find(d => 
+          !d.label.includes('Native Union') && 
+          !d.label.includes('POP Phone') &&
+          (d.label.includes('Built-in') || d.label.includes('Default') || d.deviceId === 'default')
+        );
+        
+        if (builtInSpeaker) {
+          await (ringAudio.current as any).setSinkId(builtInSpeaker.deviceId);
+          console.log('✅ Ring set to built-in speakers:', builtInSpeaker.label);
+        } else {
+          // Fallback to default (first device that's not the phone)
+          const firstNonPhone = audioOutputs.find(d => !d.label.includes('Native Union'));
+          if (firstNonPhone) {
+            await (ringAudio.current as any).setSinkId(firstNonPhone.deviceId);
+            console.log('✅ Ring set to:', firstNonPhone.label);
+          } else {
+            await (ringAudio.current as any).setSinkId('');
+            console.log('⚠️ Using default speakers');
+          }
+        }
       } else {
         console.log('⚠️ setSinkId not supported, ring will use browser default');
       }
     } catch (err) {
-      console.warn('⚠️ Could not set sink ID:', err);
+      console.warn('⚠️ Could not set output device:', err);
     }
     
     ringAudio.current.oncanplaythrough = () => {
@@ -211,7 +237,7 @@ export default function RecordingStation() {
     
     ringAudio.current.play()
       .then(() => {
-        console.log('✅ Ring playing through system speakers!');
+        console.log('✅ Ring playing!');
       })
       .catch(err => {
         console.error('❌ Ring playback failed:', err);
@@ -623,22 +649,40 @@ export default function RecordingStation() {
           <button
             onClick={async () => {
               const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-              console.log('🧪 TEST: Playing ring through system speakers (NOT phone)');
+              console.log('🧪 TEST: Playing ring through built-in speakers (NOT phone)');
               const testAudio = new Audio(ringUrl);
               testAudio.volume = 1.0;
               
-              // Force to system speakers
+              // Find and use built-in speakers
               try {
                 if ('setSinkId' in testAudio) {
-                  await (testAudio as any).setSinkId('');
-                  console.log('✅ TEST: Set to system speakers');
+                  const devices = await navigator.mediaDevices.enumerateDevices();
+                  const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                  console.log('🧪 TEST: Available outputs:', audioOutputs.map(d => d.label));
+                  
+                  const builtInSpeaker = audioOutputs.find(d => 
+                    !d.label.includes('Native Union') && 
+                    !d.label.includes('POP Phone') &&
+                    (d.label.includes('Built-in') || d.label.includes('Default') || d.deviceId === 'default')
+                  );
+                  
+                  if (builtInSpeaker) {
+                    await (testAudio as any).setSinkId(builtInSpeaker.deviceId);
+                    console.log('✅ TEST: Using', builtInSpeaker.label);
+                  } else {
+                    const firstNonPhone = audioOutputs.find(d => !d.label.includes('Native Union'));
+                    if (firstNonPhone) {
+                      await (testAudio as any).setSinkId(firstNonPhone.deviceId);
+                      console.log('✅ TEST: Using', firstNonPhone.label);
+                    }
+                  }
                 }
               } catch (err) {
-                console.warn('⚠️ TEST: setSinkId failed:', err);
+                console.warn('⚠️ TEST: Device selection failed:', err);
               }
               
               testAudio.play()
-                .then(() => console.log('✅ TEST: Ring playing through system speakers!'))
+                .then(() => console.log('✅ TEST: Ring playing!'))
                 .catch(err => console.error('❌ TEST: Failed:', err));
             }}
             className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
