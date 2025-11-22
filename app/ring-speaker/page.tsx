@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 export default function RingSpeaker() {
   const [status, setStatus] = useState<'idle' | 'ringing'>('idle');
   const [ipAddress, setIpAddress] = useState('');
+  const [audioReady, setAudioReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Get local IP address on mount
@@ -12,7 +13,11 @@ export default function RingSpeaker() {
     // Display network info
     setIpAddress(window.location.hostname);
 
-    // Poll for ring commands every 500ms
+    // Poll for ring commands every 500ms (only if audio is ready)
+    if (!audioReady) {
+      return; // Don't poll until audio is activated
+    }
+
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch('/api/ring/status');
@@ -29,27 +34,45 @@ export default function RingSpeaker() {
     }, 500);
 
     return () => clearInterval(pollInterval);
-  }, [status]);
+  }, [status, audioReady]);
 
-  const startRinging = async () => {
-    console.log('🔔 Starting ring on speaker');
-    setStatus('ringing');
-
+  const activateAudio = async () => {
+    console.log('🔓 Activating audio...');
+    
     try {
-      // Get ring tone URL from config
+      // Get ring tone URL
       const configResponse = await fetch('/api/admin/phone-audio');
       const configData = await configResponse.json();
       const ringUrl = configData.configs?.find((c: any) => c.config_key === 'ring_tone')?.audio_url 
         || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
 
-      console.log('🔔 Ring URL:', ringUrl);
+      console.log('🔔 Loading ring audio:', ringUrl);
 
-      // Use simple HTML Audio for better mobile compatibility
+      // Create audio element and load it (this unlocks audio on mobile)
       audioRef.current = new Audio(ringUrl);
       audioRef.current.loop = true;
       audioRef.current.volume = 1.0;
       
-      // Play and handle promise
+      // Load the audio file
+      await audioRef.current.load();
+      
+      setAudioReady(true);
+      console.log('✅ Audio ready! System can now ring.');
+    } catch (err) {
+      console.error('❌ Audio activation failed:', err);
+    }
+  };
+
+  const startRinging = async () => {
+    console.log('🔔 Starting ring on speaker');
+    setStatus('ringing');
+
+    if (!audioRef.current) {
+      console.warn('⚠️ Audio not ready! Tap Activate Audio first.');
+      return;
+    }
+
+    try {
       const playPromise = audioRef.current.play();
       
       if (playPromise !== undefined) {
@@ -59,11 +82,11 @@ export default function RingSpeaker() {
           })
           .catch(err => {
             console.error('❌ Play failed:', err);
-            console.log('Try tapping the Test Ring button again');
+            console.log('Try tapping Activate Audio button first');
           });
       }
     } catch (err) {
-      console.error('❌ Ring setup failed:', err);
+      console.error('❌ Ring playback failed:', err);
     }
   };
 
@@ -116,23 +139,48 @@ export default function RingSpeaker() {
           </div>
         </div>
 
-        {/* Manual test buttons */}
-        <div className="flex gap-4 justify-center">
-          <button
-            onClick={startRinging}
-            disabled={status === 'ringing'}
-            className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
-          >
-            🔔 Test Ring
-          </button>
-          <button
-            onClick={stopRinging}
-            disabled={status === 'idle'}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
-          >
-            🛑 Stop Ring
-          </button>
-        </div>
+        {/* Audio Activation */}
+        {!audioReady ? (
+          <div className="space-y-4">
+            <div className="text-yellow-400 text-lg font-semibold animate-pulse">
+              ⚠️ Audio Not Activated
+            </div>
+            <button
+              onClick={activateAudio}
+              className="px-8 py-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg font-bold text-xl"
+            >
+              🔓 TAP HERE TO ACTIVATE AUDIO
+            </button>
+            <div className="text-sm text-gray-600">
+              Mobile browsers require a tap to unlock audio playback.
+              <br />
+              Tap the button above FIRST, then the system will be ready.
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-green-400 text-lg font-semibold">
+              ✅ Audio Ready - System Active
+            </div>
+            {/* Manual test buttons */}
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={startRinging}
+                disabled={status === 'ringing'}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
+              >
+                🔔 Test Ring
+              </button>
+              <button
+                onClick={stopRinging}
+                disabled={status === 'idle'}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
+              >
+                🛑 Stop Ring
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
