@@ -48,6 +48,12 @@ export default function RingSpeaker() {
 
       // Create AudioContext for playback
       audioContextRef.current = new AudioContext({ sampleRate: 48000 });
+      
+      // CRITICAL: Resume AudioContext (required on mobile)
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+        console.log('✅ AudioContext resumed');
+      }
 
       // Fetch and decode audio
       const response = await fetch(ringUrl);
@@ -68,7 +74,7 @@ export default function RingSpeaker() {
       gainNode.connect(audioContextRef.current.destination);
       sourceNodeRef.current.start(0);
 
-      console.log('✅ Ring playing through iPad 2 speakers!');
+      console.log('✅ Ring playing through speakers!');
     } catch (err) {
       console.error('❌ Ring failed:', err);
     }
