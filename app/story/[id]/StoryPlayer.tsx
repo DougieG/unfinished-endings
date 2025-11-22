@@ -38,6 +38,8 @@ export default function StoryPlayer({ story }: StoryPlayerProps) {
             panorama={story.panorama}
             audioUrl={story.audio_url}
             autoPlay={false}
+            sketchUrl={story.sketch_processed_url || undefined}
+            introDuration={5} // Show sketch for first 5 seconds (intro bumper)
           />
         </div>
       ) : (

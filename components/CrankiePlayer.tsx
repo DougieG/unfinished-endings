@@ -27,6 +27,8 @@ interface CrankiePlayerProps {
   autoPlay?: boolean;
   onEnded?: () => void;
   hideControls?: boolean;
+  sketchUrl?: string; // Optional user sketch to show during intro
+  introDuration?: number; // Duration of intro bumper in seconds (default: 0)
 }
 
 export default function CrankiePlayer({ 
@@ -35,12 +37,15 @@ export default function CrankiePlayer({
   audioElement,
   autoPlay = false,
   onEnded,
-  hideControls = false
+  hideControls = false,
+  sketchUrl,
+  introDuration = 0
 }: CrankiePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(panorama.scroll_duration);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const [showingIntro, setShowingIntro] = useState(sketchUrl && introDuration > 0);
   const audioRef = useRef<HTMLAudioElement | null>(audioElement || null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -185,6 +190,14 @@ export default function CrankiePlayer({
     }
   }, [isPlaying, audioUrl, audioElement, duration, onEnded]);
 
+  // Transition from intro sketch to crankie
+  useEffect(() => {
+    if (showingIntro && introDuration > 0 && currentTime >= introDuration) {
+      console.log(`🎬 Intro complete at ${currentTime}s, transitioning to crankie`);
+      setShowingIntro(false);
+    }
+  }, [currentTime, introDuration, showingIntro]);
+
   const togglePlayPause = () => {
     const audio = audioRef.current;
     
@@ -230,17 +243,42 @@ export default function CrankiePlayer({
         }}
         onClick={handleSeek}
       >
-        {/* Scrolling Panorama */}
-        <motion.div
-          className="absolute top-0 left-0 h-full flex"
-          animate={{ x: scrollX }}
-          transition={{ 
-            type: 'tween',
-            ease: 'linear',
-            duration: 0.3 
-          }}
-        >
-          {panorama.scenes.map((scene) => (
+        {/* Show intro sketch or scrolling crankie */}
+        {showingIntro && sketchUrl ? (
+          /* Intro: User's sketch as loading screen */
+          <motion.div
+            key="intro-sketch"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center bg-cardboard/30 p-8"
+          >
+            <img
+              src={sketchUrl}
+              alt="Your sketch"
+              className="max-w-full max-h-full object-contain rounded shadow-lg"
+            />
+            <div className="absolute bottom-4 left-4 right-4 text-center">
+              <p className="text-sm text-soot/60 font-sans italic">
+                Your visual reference...
+              </p>
+            </div>
+          </motion.div>
+        ) : (
+          /* Crankie: Scrolling panorama */
+          <motion.div
+            key="crankie-panorama"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute top-0 left-0 h-full flex"
+            style={{ x: scrollX }}
+            transition={{ 
+              type: 'tween',
+              ease: 'linear',
+              duration: 0.3 
+            }}
+          >
+            {panorama.scenes.map((scene) => (
             <div
               key={scene.sequence}
               className="h-full flex-shrink-0 relative"
@@ -265,8 +303,9 @@ export default function CrankiePlayer({
                 />
               )}
             </div>
-          ))}
-        </motion.div>
+            ))}
+          </motion.div>
+        )}
 
         {/* Ornate Frame Overlay */}
         <div className="absolute inset-0 pointer-events-none">

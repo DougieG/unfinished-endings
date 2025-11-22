@@ -75,9 +75,9 @@ export default function SimplifiedSketchPage() {
       formData.append('first_name', firstName);
       formData.append('email', email);
 
-      console.log('📤 Uploading to v2 endpoint...');
+      console.log('📤 Uploading (raw - no processing)...');
       
-      const response = await fetch('/api/sketch/upload-v2', {
+      const response = await fetch('/api/sketch/upload-raw', {
         method: 'POST',
         body: formData
       });
@@ -136,10 +136,10 @@ export default function SimplifiedSketchPage() {
             className="bg-cardboard rounded-lg shadow-lg p-8"
           >
             <h1 className="text-3xl font-bold text-soot mb-2">
-              Upload Your Sketch
+              Upload Your Form
             </h1>
             <p className="text-soot/70 mb-6">
-              Simple and fast - just upload the image and enter the details
+              Upload a photo of your Ending Care Form - quick and simple
             </p>
 
             {/* File Upload */}
@@ -255,12 +255,12 @@ export default function SimplifiedSketchPage() {
             animate={{ opacity: 1 }}
             className="bg-cardboard rounded-lg shadow-lg p-12 text-center"
           >
-            <div className="text-6xl mb-4 animate-spin">🎨</div>
+            <div className="text-6xl mb-4 animate-spin">📤</div>
             <h2 className="text-2xl font-bold text-soot mb-2">
-              Processing...
+              Uploading...
             </h2>
             <p className="text-soot/70">
-              Extracting your sketch (no OCR - much faster!)
+              Just a moment - uploading your form
             </p>
           </motion.div>
         )}
@@ -307,7 +307,7 @@ export default function SimplifiedSketchPage() {
                   rel="noopener noreferrer"
                   className="flex-1 bg-teal hover:bg-teal/90 text-canvas text-center font-medium py-2 rounded transition-colors"
                 >
-                  Download Sketch
+                  View Full Size
                 </a>
               </div>
             </div>
