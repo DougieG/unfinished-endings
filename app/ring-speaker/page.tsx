@@ -44,22 +44,32 @@ export default function RingSpeaker() {
     setActivationStatus('Loading audio...');
     
     try {
-      // Try to get configured ring tone, with fallback
+      // Get configured ring tone from admin page
+      setActivationStatus('Fetching ring tone URL...');
       let ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
       
       try {
         const configResponse = await fetch('/api/admin/phone-audio');
+        if (!configResponse.ok) {
+          throw new Error(`Config fetch failed: ${configResponse.status}`);
+        }
         const configData = await configResponse.json();
+        console.log('📋 Config data:', configData);
+        
         const configuredUrl = configData.configs?.find((c: any) => c.config_key === 'ring_tone')?.audio_url;
         if (configuredUrl) {
           ringUrl = configuredUrl;
-          console.log('✅ Using configured ring URL');
+          console.log('✅ Using configured ring URL:', ringUrl);
+        } else {
+          console.log('⚠️ No ring_tone in config, using default');
         }
       } catch (e) {
-        console.log('⚠️ Could not fetch config, using default');
+        console.error('⚠️ Config fetch error:', e);
+        console.log('Using default URL');
       }
       
-      console.log('🔔 Ring URL:', ringUrl);
+      console.log('🔔 Final Ring URL:', ringUrl);
+      setActivationStatus('Loading ring audio...');
 
       // Create audio element
       audioRef.current = new Audio();
@@ -87,8 +97,15 @@ export default function RingSpeaker() {
           
           audioRef.current!.addEventListener('error', (e) => {
             clearTimeout(timeout);
-            console.error('❌ Audio load error:', e);
-            reject(new Error('Failed to load audio file'));
+            const target = e.target as HTMLAudioElement;
+            const errorDetails = {
+              src: target?.src,
+              error: target?.error,
+              networkState: target?.networkState,
+              readyState: target?.readyState
+            };
+            console.error('❌ Audio load error:', errorDetails);
+            reject(new Error(`Failed to load: ${target?.src}. Network state: ${target?.networkState}`));
           }, { once: true });
           
           audioRef.current!.load();
