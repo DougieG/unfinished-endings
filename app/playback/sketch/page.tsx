@@ -84,15 +84,24 @@ export default function SimplifiedSketchPage() {
 
       if (!response.ok) {
         let errorMessage = 'Upload failed';
+        
+        // Clone response so we can try reading it twice if needed
+        const responseClone = response.clone();
+        
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || 'Upload failed';
           console.error('Server error:', errorData);
         } catch (e) {
-          // Response wasn't JSON - probably HTML error page
-          const text = await response.text();
-          console.error('Non-JSON error response:', text.substring(0, 200));
-          errorMessage = `Server error (${response.status}): Check function logs`;
+          // Response wasn't JSON - try reading as text using the clone
+          try {
+            const text = await responseClone.text();
+            console.error('Non-JSON error response:', text.substring(0, 200));
+            errorMessage = `Server error (${response.status}): Check function logs`;
+          } catch (e2) {
+            console.error('Could not read error response at all');
+            errorMessage = `Server error (${response.status})`;
+          }
         }
         throw new Error(errorMessage);
       }
