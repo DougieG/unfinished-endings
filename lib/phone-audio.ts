@@ -142,13 +142,22 @@ export class PhoneAudioManager {
         await (this.playbackContext.destination as any).setSinkId(deviceId);
       }
 
-      // Start playback
-      this.playbackSource.start(0);
+      // Return a promise that resolves when audio finishes
+      return new Promise<void>((resolve) => {
+        if (!this.playbackSource) {
+          resolve();
+          return;
+        }
 
-      // Clean up when finished
-      this.playbackSource.onended = () => {
-        this.stopPlayback();
-      };
+        // Start playback
+        this.playbackSource.start(0);
+
+        // Clean up when finished
+        this.playbackSource.onended = () => {
+          this.stopPlayback();
+          resolve();
+        };
+      });
 
     } catch (error) {
       console.error('Error playing through recording phone:', error);
