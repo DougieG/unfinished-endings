@@ -44,9 +44,21 @@ export default function RingSpeaker() {
     setActivationStatus('Loading audio...');
     
     try {
-      // SIMPLEST APPROACH: Just create audio and load it
-      // The button tap IS the user interaction - no tricks needed!
-      const ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+      // Try to get configured ring tone, with fallback
+      let ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+      
+      try {
+        const configResponse = await fetch('/api/admin/phone-audio');
+        const configData = await configResponse.json();
+        const configuredUrl = configData.configs?.find((c: any) => c.config_key === 'ring_tone')?.audio_url;
+        if (configuredUrl) {
+          ringUrl = configuredUrl;
+          console.log('✅ Using configured ring URL');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not fetch config, using default');
+      }
+      
       console.log('🔔 Ring URL:', ringUrl);
 
       // Create audio element
@@ -60,26 +72,40 @@ export default function RingSpeaker() {
       setActivationStatus('Downloading ring audio...');
       
       // Wait for it to load (with 10 second timeout)
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          console.log('✅ Timeout - assuming loaded');
-          resolve(null);
-        }, 10000);
+      try {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.log('✅ Timeout - assuming loaded');
+            resolve(null);
+          }, 10000);
+          
+          audioRef.current!.addEventListener('canplaythrough', () => {
+            clearTimeout(timeout);
+            console.log('✅ Audio fully loaded');
+            resolve(null);
+          }, { once: true });
+          
+          audioRef.current!.addEventListener('error', (e) => {
+            clearTimeout(timeout);
+            console.error('❌ Audio load error:', e);
+            reject(new Error('Failed to load audio file'));
+          }, { once: true });
+          
+          audioRef.current!.load();
+        });
+      } catch (loadErr) {
+        console.error('❌ Primary audio failed, trying fallback...');
         
-        audioRef.current!.addEventListener('canplaythrough', () => {
-          clearTimeout(timeout);
-          console.log('✅ Audio fully loaded');
-          resolve(null);
-        }, { once: true });
+        // FALLBACK: Use a simple beep tone as data URL
+        const fallbackUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGq96+abRxMMUaju+rZiHAU7k9n0ynMrBSV6y/HdjEIKEmCz6+mnVhYKRqLh87xxIgUpgMzx2Io4CBd1vOvomUYSDE6o7fmyYRwEOJHY8s51LAUmesvx34xCChJgs+vpp1cWCkmi4fO8cSIFKoHM8diKOQgWdrzr5plFEgxOqO35smAcBDiS2PLOdiwFJnrL8d+MQgoRYbPr6adXFwlKouHzvHEiBSqBzPHYijkIFXa87OeZRRIMT6ft+LJgHAQ5kdjzzXUsBS16y/HfjEIKEWGy7OqnVxcJSqLh87xxIgUpgsvy2Yo6CBV2u+znmEUSDE+n7fezbxwEOpHY88pyLAUuecvx34xCChFhs+zqp1gXCUqj4POzcSIFKYLL8dmKOggVdrrt6JdEEwxPp+32sW8cBDqS2PPLciwFLnrL8N+MQgoRYbLt6qdYGAlKo+DzvHAiBSmCy/HYijsIFHi66+iYRBMMUKfp9rJuHgQ7k9jyyXIrBSx6yu/ejEILEmKx7+mmWBgJTKLf+LxxIQYrgsnw14o7CBR5vOrmmEQTDFCn6PWybxwFO5PY88pyLAUte8rv3otCCxJisO7ppVkYCUyj3/i8cCIFLILL8NiJOwgUe7zq5pdFEw1Qp+n1sm4dBT+S2PL';
         
-        audioRef.current!.addEventListener('error', (e) => {
-          clearTimeout(timeout);
-          console.error('❌ Audio load error:', e);
-          reject(new Error('Failed to load audio file'));
-        }, { once: true });
-        
+        audioRef.current!.src = fallbackUrl;
         audioRef.current!.load();
-      });
+        
+        console.log('⚠️ Using fallback beep sound');
+        setActivationStatus('Using fallback sound...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       setActivationStatus('');
       setAudioReady(true);
