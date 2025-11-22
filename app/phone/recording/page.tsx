@@ -7,7 +7,7 @@ import { getPhoneAudioConfig, type PhoneAudioConfig } from '@/lib/phone-audio-co
 import { getUploadQueue } from '@/lib/upload-queue';
 import { validateAudioBlob, isOnline } from '@/lib/upload-validator';
 
-type StationState = 'idle' | 'intro' | 'recording' | 'processing' | 'error' | 'queued';
+type StationState = 'idle' | 'intro' | 'recording' | 'processing' | 'ringing' | 'outro' | 'error' | 'queued';
 
 export default function RecordingStation() {
   const [state, setState] = useState<StationState>('idle');
@@ -26,6 +26,7 @@ export default function RecordingStation() {
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   const silenceCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const audioConfig = useRef<PhoneAudioConfig | null>(null);
+  const ringAudio = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio manager and fetch config
   useEffect(() => {
@@ -54,6 +55,10 @@ export default function RecordingStation() {
     if (timerRef.current) clearInterval(timerRef.current);
     if (silenceTimer.current) clearTimeout(silenceTimer.current);
     if (silenceCheckInterval.current) clearInterval(silenceCheckInterval.current);
+    if (ringAudio.current) {
+      ringAudio.current.pause();
+      ringAudio.current = null;
+    }
     audioManager.current?.cleanup();
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
@@ -80,6 +85,9 @@ export default function RecordingStation() {
       if (PHONE_CONFIG.recording.offHook.includes(e.code)) {
         if (state === 'idle') {
           startSession();
+        } else if (state === 'ringing') {
+          // Answer the ringing phone to hear outro
+          answerForOutro();
         }
       }
     };
@@ -90,6 +98,9 @@ export default function RecordingStation() {
       if (PHONE_CONFIG.recording.onHook.includes(e.code)) {
         if (state === 'recording' || state === 'intro') {
           endSession();
+        } else if (state === 'outro') {
+          // Hang up after outro completes
+          resetToIdle();
         }
       }
     };
@@ -138,6 +149,43 @@ export default function RecordingStation() {
         resolve(); // Continue anyway
       });
     });
+  };
+
+  const startRinging = () => {
+    console.log('📞 Phone is ringing...');
+    setState('ringing');
+    setStatusMessage('Phone is ringing - pick up to hear message');
+    
+    // Play ring tone on loop
+    // Using standard phone ring URL - replace with custom if available
+    const ringUrl = 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+    ringAudio.current = new Audio(ringUrl);
+    ringAudio.current.loop = true;
+    ringAudio.current.volume = 0.7;
+    
+    ringAudio.current.play().catch(err => {
+      console.error('Ring playback failed:', err);
+      // Continue anyway - visual state shows ringing
+    });
+  };
+
+  const answerForOutro = async () => {
+    console.log('📞 Answered ringing phone - playing outro...');
+    
+    // Stop ring
+    if (ringAudio.current) {
+      ringAudio.current.pause();
+      ringAudio.current = null;
+    }
+    
+    setState('outro');
+    setStatusMessage('Playing message...');
+    
+    // Play outro message
+    await playClosingMessage();
+    
+    // After outro plays, user can hang up
+    setStatusMessage('Thank you! Hang up when ready.');
   };
 
   const startSession = async () => {
@@ -430,11 +478,10 @@ export default function RecordingStation() {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
 
-      // Play closing message
-      setStatusMessage('Thank you!');
-      await playClosingMessage();
-
-      resetToIdle();
+      // Recording saved! Now make phone ring for outro
+      setStatusMessage('Recording saved!');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
+      startRinging();
     } catch (err) {
       console.error('❌ Save failed:', err);
       setState('error');
@@ -472,11 +519,10 @@ export default function RecordingStation() {
         console.error('❌ Queue failed:', err);
       });
 
-      // Play closing message immediately (don't wait for upload)
-      setStatusMessage('Thank you!');
-      await playClosingMessage();
-
-      resetToIdle();
+      // Recording saved in background! Now make phone ring for outro
+      setStatusMessage('Recording saved!');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
+      startRinging();
     } catch (err) {
       console.error('❌ Save failed:', err);
       setState('error');
@@ -512,6 +558,8 @@ export default function RecordingStation() {
             </div>
           )}
           {state === 'processing' && <span className="text-blue-400 animate-pulse">Saving...</span>}
+          {state === 'ringing' && <span className="text-green-400 animate-pulse">📞 Ringing... Pick up!</span>}
+          {state === 'outro' && <span className="text-green-300">Playing message...</span>}
           {state === 'queued' && <span className="text-yellow-400">Queued (offline)</span>}
           {state === 'error' && <span className="text-red-600">Error</span>}
         </div>
