@@ -602,6 +602,24 @@ export default function RecordingStation() {
         <div className="text-xl text-gray-600 max-w-md mx-auto">
           {statusMessage}
         </div>
+
+        {/* Test Ring Button */}
+        {state === 'idle' && (
+          <button
+            onClick={() => {
+              const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
+              console.log('🧪 TEST: Playing ring through iPad speakers');
+              const testAudio = new Audio(ringUrl);
+              testAudio.volume = 1.0;
+              testAudio.play()
+                .then(() => console.log('✅ TEST: Ring playing!'))
+                .catch(err => console.error('❌ TEST: Failed:', err));
+            }}
+            className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
+          >
+            🔔 Test Ring Sound
+          </button>
+        )}
       </div>
     </main>
   );
