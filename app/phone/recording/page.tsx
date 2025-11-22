@@ -228,6 +228,13 @@ export default function RecordingStation() {
       const dataArray = new Uint8Array(analyzerNode.frequencyBinCount);
       
       // ===== BULLETPROOF SILENCE DETECTION SETTINGS =====
+      // ENABLE/DISABLE: Set to false to completely disable auto-stop
+      const SILENCE_DETECTION_ENABLED = false; // DISABLED until we debug the issue
+      
+      if (!SILENCE_DETECTION_ENABLED) {
+        console.log('⚠️ SILENCE DETECTION DISABLED - recording will only stop on manual hangup');
+      }
+      
       // SILENCE_THRESHOLD: Higher = less sensitive (ignores quiet speech/breathing)
       // Set HIGH to avoid stopping during natural pauses, quiet speech, thinking
       const SILENCE_THRESHOLD = 35; // Very conservative - only true silence triggers
@@ -256,6 +263,12 @@ export default function RecordingStation() {
         }
         const average = sum / dataArray.length;
         const recordingDuration = Date.now() - recordingStartTime;
+        
+        // MASTER KILL SWITCH: If disabled, just monitor but never stop
+        if (!SILENCE_DETECTION_ENABLED) {
+          // Log volume levels but don't trigger any stops
+          return;
+        }
         
         // BULLETPROOF: Don't check for silence until minimum recording time has passed
         if (recordingDuration < MINIMUM_RECORDING_TIME) {
