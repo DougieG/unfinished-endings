@@ -178,17 +178,30 @@ export default function RecordingStation() {
     setState('ringing');
     setStatusMessage('Phone is ringing - pick up to hear message');
     
-    // Play ring tone on loop from admin-configured audio
+    // Play ring tone on loop through iPad speakers (browser audio)
     const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-    console.log('🔔 Playing RING audio:', ringUrl);
+    console.log('🔔 Playing RING through iPad speakers:', ringUrl);
+    
     ringAudio.current = new Audio(ringUrl);
     ringAudio.current.loop = true;
-    ringAudio.current.volume = 0.7;
+    ringAudio.current.volume = 1.0; // Full volume for iPad speakers
     
-    ringAudio.current.play().catch(err => {
-      console.error('Ring playback failed:', err);
-      // Continue anyway - visual state shows ringing
-    });
+    ringAudio.current.oncanplaythrough = () => {
+      console.log('✅ Ring audio loaded and ready');
+    };
+    
+    ringAudio.current.onerror = (err) => {
+      console.error('❌ Ring audio failed to load:', err);
+    };
+    
+    ringAudio.current.play()
+      .then(() => {
+        console.log('✅ Ring playing through iPad speakers!');
+      })
+      .catch(err => {
+        console.error('❌ Ring playback failed:', err);
+        console.log('Autoplay might be blocked - ring will show visually');
+      });
   };
 
   const answerForOutro = async () => {
