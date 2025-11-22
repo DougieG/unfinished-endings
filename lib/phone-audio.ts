@@ -105,6 +105,58 @@ export class PhoneAudioManager {
   }
 
   /**
+   * Play audio through Phone 1 (Recording Phone)
+   */
+  async playThroughRecordingPhone(audioUrl: string): Promise<void> {
+    try {
+      const deviceId = await this.findPhoneDevice(
+        this.config.phone1DeviceName,
+        'audiooutput'
+      );
+
+      if (!deviceId) {
+        throw new Error(`Recording phone "${this.config.phone1DeviceName}" not found`);
+      }
+
+      // Create audio context if needed
+      if (!this.playbackContext) {
+        this.playbackContext = new AudioContext({
+          sampleRate: this.config.sampleRate,
+        });
+      }
+
+      // Fetch and decode audio
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.playbackContext.decodeAudioData(arrayBuffer);
+
+      // Create source node
+      this.playbackSource = this.playbackContext.createBufferSource();
+      this.playbackSource.buffer = audioBuffer;
+
+      // Connect to destination (phone output)
+      this.playbackSource.connect(this.playbackContext.destination);
+
+      // Set output device (requires Web Audio API setSinkId support)
+      if ('setSinkId' in this.playbackContext.destination) {
+        await (this.playbackContext.destination as any).setSinkId(deviceId);
+      }
+
+      // Start playback
+      this.playbackSource.start(0);
+
+      // Clean up when finished
+      this.playbackSource.onended = () => {
+        this.stopPlayback();
+      };
+
+    } catch (error) {
+      console.error('Error playing through recording phone:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Play audio through Phone 2 (Playback Phone)
    */
   async startPlayback(audioUrl: string): Promise<void> {

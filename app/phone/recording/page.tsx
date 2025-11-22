@@ -116,11 +116,11 @@ export default function RecordingStation() {
   const playWelcomeMessage = (): Promise<void> => {
     return new Promise(async (resolve) => {
       const audioUrl = audioConfig.current?.interior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int.phone pre-track.mp3';
-      console.log('🎵 Playing INTRO audio through phone:', audioUrl);
+      console.log('🎵 Playing INTRO audio through Phone 1 (Recording):', audioUrl);
       
       try {
-        // Play through physical phone device
-        await audioManager.current?.startPlayback(audioUrl);
+        // Play through Phone 1 (Recording Phone)
+        await audioManager.current?.playThroughRecordingPhone(audioUrl);
         // Audio plays automatically and calls onended when done
         // For now, estimate duration or we could fetch it
         setTimeout(resolve, 5000); // Adjust based on your intro length
@@ -134,11 +134,11 @@ export default function RecordingStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise(async (resolve) => {
       const audioUrl = audioConfig.current?.interior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3';
-      console.log('🎵 Playing OUTRO audio through phone:', audioUrl);
+      console.log('🎵 Playing OUTRO audio through Phone 1 (Recording):', audioUrl);
       
       try {
-        // Play through physical phone device
-        await audioManager.current?.startPlayback(audioUrl);
+        // Play through Phone 1 (Recording Phone)
+        await audioManager.current?.playThroughRecordingPhone(audioUrl);
         // Estimate duration - adjust based on your outro length
         setTimeout(resolve, 5000);
       } catch (err) {
