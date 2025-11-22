@@ -97,6 +97,10 @@ export default function RingSpeaker() {
     }
 
     try {
+      // Reset audio to beginning before playing
+      audioRef.current.currentTime = 0;
+      audioRef.current.loop = true;
+      
       const playPromise = audioRef.current.play();
       
       if (playPromise !== undefined) {
@@ -106,11 +110,12 @@ export default function RingSpeaker() {
           })
           .catch(err => {
             console.error('❌ Play failed:', err);
-            console.log('Try tapping Activate Audio button first');
+            alert(`Play failed: ${err.message}. Try reloading page.`);
           });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Ring playback failed:', err);
+      alert(`Ring failed: ${err.message}`);
     }
   };
 
@@ -121,7 +126,7 @@ export default function RingSpeaker() {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      audioRef.current = null;
+      // DON'T set to null - keep the audio element for reuse
     }
   };
 
@@ -193,7 +198,7 @@ export default function RingSpeaker() {
               ✅ Audio Ready - System Active
             </div>
             {/* Manual test buttons */}
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center flex-wrap">
               <button
                 onClick={startRinging}
                 disabled={status === 'ringing'}
@@ -207,6 +212,17 @@ export default function RingSpeaker() {
                 className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
               >
                 🛑 Stop Ring
+              </button>
+              <button
+                onClick={() => {
+                  stopRinging();
+                  setAudioReady(false);
+                  setActivationStatus('');
+                  audioRef.current = null;
+                }}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold"
+              >
+                🔄 Reset
               </button>
             </div>
           </div>
