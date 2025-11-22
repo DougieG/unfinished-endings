@@ -173,18 +173,33 @@ export default function RecordingStation() {
     });
   };
 
-  const startRinging = () => {
+  const startRinging = async () => {
     console.log('📞 Phone is ringing...');
     setState('ringing');
     setStatusMessage('Phone is ringing - pick up to hear message');
     
-    // Play ring tone on loop through iPad speakers (browser audio)
+    // Play ring tone on loop through iPad speakers (NOT phone device)
     const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-    console.log('🔔 Playing RING through iPad speakers:', ringUrl);
+    console.log('🔔 Playing RING through iPad/laptop speakers (NOT phone):', ringUrl);
     
     ringAudio.current = new Audio(ringUrl);
     ringAudio.current.loop = true;
     ringAudio.current.volume = 1.0; // Full volume for iPad speakers
+    
+    // CRITICAL: Force ring to play through default system speakers, NOT phone device
+    // This prevents the browser from routing the ring to the phone handset
+    try {
+      // Check if setSinkId is supported (Chrome/Edge)
+      if ('setSinkId' in ringAudio.current) {
+        // Set to empty string = default system speakers
+        await (ringAudio.current as any).setSinkId('');
+        console.log('✅ Ring explicitly set to use default system speakers');
+      } else {
+        console.log('⚠️ setSinkId not supported, ring will use browser default');
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not set sink ID:', err);
+    }
     
     ringAudio.current.oncanplaythrough = () => {
       console.log('✅ Ring audio loaded and ready');
@@ -196,7 +211,7 @@ export default function RecordingStation() {
     
     ringAudio.current.play()
       .then(() => {
-        console.log('✅ Ring playing through iPad speakers!');
+        console.log('✅ Ring playing through system speakers!');
       })
       .catch(err => {
         console.error('❌ Ring playback failed:', err);
@@ -606,13 +621,24 @@ export default function RecordingStation() {
         {/* Test Ring Button */}
         {state === 'idle' && (
           <button
-            onClick={() => {
+            onClick={async () => {
               const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-              console.log('🧪 TEST: Playing ring through iPad speakers');
+              console.log('🧪 TEST: Playing ring through system speakers (NOT phone)');
               const testAudio = new Audio(ringUrl);
               testAudio.volume = 1.0;
+              
+              // Force to system speakers
+              try {
+                if ('setSinkId' in testAudio) {
+                  await (testAudio as any).setSinkId('');
+                  console.log('✅ TEST: Set to system speakers');
+                }
+              } catch (err) {
+                console.warn('⚠️ TEST: setSinkId failed:', err);
+              }
+              
               testAudio.play()
-                .then(() => console.log('✅ TEST: Ring playing!'))
+                .then(() => console.log('✅ TEST: Ring playing through system speakers!'))
                 .catch(err => console.error('❌ TEST: Failed:', err));
             }}
             className="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
