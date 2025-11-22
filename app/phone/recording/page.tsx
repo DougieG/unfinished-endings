@@ -226,9 +226,22 @@ export default function RecordingStation() {
       
       // Monitor audio levels
       const dataArray = new Uint8Array(analyzerNode.frequencyBinCount);
-      const SILENCE_THRESHOLD = 10; // Adjust this value based on testing
-      const SILENCE_DURATION = 4000; // 4 seconds of silence
+      
+      // ===== BULLETPROOF SILENCE DETECTION SETTINGS =====
+      // SILENCE_THRESHOLD: Higher = less sensitive (ignores quiet speech/breathing)
+      // Set HIGH to avoid stopping during natural pauses, quiet speech, thinking
+      const SILENCE_THRESHOLD = 35; // Very conservative - only true silence triggers
+      
+      // SILENCE_DURATION: How long of complete silence before auto-stop (milliseconds)
+      // Set LONG to allow for long thinking pauses, emotional moments
+      const SILENCE_DURATION = 10000; // 10 seconds of complete silence
+      
+      // MINIMUM_RECORDING_TIME: Don't check for silence until this much time has passed
+      // Prevents premature stopping if someone starts quietly or pauses early
+      const MINIMUM_RECORDING_TIME = 15000; // 15 seconds - let them get started
+      
       let silenceStart: number | null = null;
+      const recordingStartTime = Date.now();
       
       silenceCheckInterval.current = setInterval(() => {
         if (!analyser.current) return;
@@ -242,21 +255,31 @@ export default function RecordingStation() {
           sum += normalized;
         }
         const average = sum / dataArray.length;
+        const recordingDuration = Date.now() - recordingStartTime;
+        
+        // BULLETPROOF: Don't check for silence until minimum recording time has passed
+        if (recordingDuration < MINIMUM_RECORDING_TIME) {
+          return; // Let them record freely for the first 15 seconds
+        }
         
         if (average < SILENCE_THRESHOLD) {
           // Silence detected
           if (silenceStart === null) {
             silenceStart = Date.now();
-            console.log('Silence detected, starting timer...');
-          } else if (Date.now() - silenceStart >= SILENCE_DURATION) {
-            // Silence threshold reached
-            console.log('Silence duration exceeded, stopping recording...');
-            stopRecordingDueToSilence();
+            console.log(`🔇 Silence detected (volume: ${average.toFixed(2)} < ${SILENCE_THRESHOLD}), starting ${SILENCE_DURATION/1000}s timer... [Recording: ${Math.floor(recordingDuration/1000)}s]`);
+          } else {
+            const elapsed = Date.now() - silenceStart;
+            if (elapsed >= SILENCE_DURATION) {
+              // Silence threshold reached
+              console.log(`⏹️ Silence duration exceeded (${elapsed/1000}s >= ${SILENCE_DURATION/1000}s), stopping recording... [Total: ${Math.floor(recordingDuration/1000)}s]`);
+              stopRecordingDueToSilence();
+            }
           }
         } else {
           // Sound detected, reset silence timer
           if (silenceStart !== null) {
-            console.log('Sound detected, resetting silence timer');
+            const elapsed = Date.now() - silenceStart;
+            console.log(`🔊 Sound detected (volume: ${average.toFixed(2)} > ${SILENCE_THRESHOLD}), resetting timer after ${(elapsed/1000).toFixed(1)}s [Recording: ${Math.floor(recordingDuration/1000)}s]`);
             silenceStart = null;
           }
         }
@@ -267,9 +290,18 @@ export default function RecordingStation() {
   };
 
   const stopRecordingDueToSilence = async () => {
+    console.log('🛑 Stopping recording due to silence...');
+    
     // Clear intervals
     if (timerRef.current) clearInterval(timerRef.current);
-    if (silenceCheckInterval.current) clearInterval(silenceCheckInterval.current);
+    if (silenceCheckInterval.current) {
+      clearInterval(silenceCheckInterval.current);
+      silenceCheckInterval.current = null;
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
     
     setState('processing');
     setStatusMessage('Saving...');
@@ -300,7 +332,19 @@ export default function RecordingStation() {
   };
 
   const endSession = async () => {
+    console.log('📴 Manual hangup - stopping recording...');
+    
+    // Clear all timers and intervals
     if (timerRef.current) clearInterval(timerRef.current);
+    if (silenceCheckInterval.current) {
+      clearInterval(silenceCheckInterval.current);
+      silenceCheckInterval.current = null;
+    }
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+    
     setState('processing');
     setStatusMessage('Saving...');
 
@@ -317,6 +361,12 @@ export default function RecordingStation() {
 
     // Stop audio stream
     audioManager.current?.stopRecording();
+    
+    // Clean up audio context
+    if (audioContext.current) {
+      audioContext.current.close();
+      audioContext.current = null;
+    }
 
     // Notify backend of hook state
     await fetch('/api/phone/hook', {
