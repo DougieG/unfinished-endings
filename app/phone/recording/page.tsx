@@ -114,40 +114,37 @@ export default function RecordingStation() {
   }, [state]);
 
   const playWelcomeMessage = (): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       const audioUrl = audioConfig.current?.interior_intro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int.phone pre-track.mp3';
-      console.log('🎵 Playing INTRO audio:', audioUrl);
-      const audio = new Audio(audioUrl);
+      console.log('🎵 Playing INTRO audio through phone:', audioUrl);
       
-      audio.onended = () => resolve();
-      audio.onerror = (err) => {
+      try {
+        // Play through physical phone device
+        await audioManager.current?.startPlayback(audioUrl);
+        // Audio plays automatically and calls onended when done
+        // For now, estimate duration or we could fetch it
+        setTimeout(resolve, 5000); // Adjust based on your intro length
+      } catch (err) {
         console.error('Welcome message failed to play', err);
         resolve(); // Continue anyway
-      };
-      
-      audio.play().catch(err => {
-        console.error('Audio play failed', err);
-        resolve(); // Continue anyway
-      });
+      }
     });
   };
 
   const playClosingMessage = (): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       const audioUrl = audioConfig.current?.interior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3';
-      console.log('🎵 Playing OUTRO audio:', audioUrl);
-      const audio = new Audio(audioUrl);
+      console.log('🎵 Playing OUTRO audio through phone:', audioUrl);
       
-      audio.onended = () => resolve();
-      audio.onerror = (err) => {
+      try {
+        // Play through physical phone device
+        await audioManager.current?.startPlayback(audioUrl);
+        // Estimate duration - adjust based on your outro length
+        setTimeout(resolve, 5000);
+      } catch (err) {
         console.error('Closing message failed to play', err);
         resolve(); // Continue anyway
-      };
-      
-      audio.play().catch(err => {
-        console.error('Audio play failed', err);
-        resolve(); // Continue anyway
-      });
+      }
     });
   };
 
