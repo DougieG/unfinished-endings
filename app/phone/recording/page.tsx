@@ -192,56 +192,17 @@ export default function RecordingStation() {
     setStatusMessage('Phone is ringing - pick up to hear message');
     
     try {
-      const ringUrl = audioConfig.current?.ring_tone || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/phone-ring.mp3';
-      console.log('🔔 Setting up DEDICATED AudioContext for ring on built-in speakers');
-      
-      // Create a DEDICATED AudioContext for ring ONLY
-      ringAudioContext.current = new AudioContext({ sampleRate: 48000 });
-      
-      // Find built-in speakers (NOT the phone)
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-      
-      console.log('🔊 Available outputs:', audioOutputs.map(d => d.label));
-      
-      const builtInSpeaker = audioOutputs.find(d => 
-        !d.label.includes('Native Union') && 
-        !d.label.includes('POP Phone') &&
-        d.label.includes('Built-in')
-      );
-      
-      // Set this AudioContext to output to built-in speakers ONLY
-      if (builtInSpeaker && 'setSinkId' in ringAudioContext.current) {
-        await (ringAudioContext.current as any).setSinkId(builtInSpeaker.deviceId);
-        console.log('✅ Ring AudioContext routed to:', builtInSpeaker.label);
-      } else {
-        console.warn('⚠️ Could not set ring to built-in speakers, using default');
-      }
-      
-      // Fetch and decode ring audio
-      const response = await fetch(ringUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await ringAudioContext.current.decodeAudioData(arrayBuffer);
-      
-      // Create a looping source
-      ringSourceNode.current = ringAudioContext.current.createBufferSource();
-      ringSourceNode.current.buffer = audioBuffer;
-      ringSourceNode.current.loop = true; // Loop the ring
-      
-      // Create gain node for volume control
-      const gainNode = ringAudioContext.current.createGain();
-      gainNode.gain.value = 1.0; // Full volume
-      
-      // Connect: source -> gain -> output (built-in speakers)
-      ringSourceNode.current.connect(gainNode);
-      gainNode.connect(ringAudioContext.current.destination);
-      
-      // Start playing the ring
-      ringSourceNode.current.start(0);
-      console.log('✅ Ring playing through dedicated AudioContext on built-in speakers!');
+      // Trigger ring on iPad 2 via API
+      console.log('🔔 Triggering ring on iPad 2 speaker station');
+      await fetch('/api/ring/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shouldRing: true }),
+      });
+      console.log('✅ Ring command sent to iPad 2');
       
     } catch (err) {
-      console.error('❌ Ring setup failed:', err);
+      console.error('❌ Ring trigger failed:', err);
       setState('ringing'); // Still show visual ring
     }
   };
@@ -249,16 +210,17 @@ export default function RecordingStation() {
   const answerForOutro = async () => {
     console.log('📞 Answered ringing phone - playing outro...');
     
-    // Stop ring AudioContext
-    if (ringSourceNode.current) {
-      ringSourceNode.current.stop();
-      ringSourceNode.current = null;
+    // Stop ring on iPad 2
+    try {
+      await fetch('/api/ring/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shouldRing: false }),
+      });
+      console.log('✅ Ring stopped on iPad 2');
+    } catch (err) {
+      console.error('❌ Stop ring failed:', err);
     }
-    if (ringAudioContext.current) {
-      ringAudioContext.current.close();
-      ringAudioContext.current = null;
-    }
-    console.log('✅ Ring stopped');
     
     setState('outro');
     setStatusMessage('Playing message...');
