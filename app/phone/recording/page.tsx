@@ -640,7 +640,17 @@ export default function RecordingStation() {
             </div>
           )}
           {state === 'processing' && <span className="text-blue-400 animate-pulse">Saving...</span>}
-          {state === 'ringing' && <span className="text-green-400 animate-pulse">📞 Ringing... Pick up!</span>}
+          {state === 'ringing' && (
+            <div className="space-y-6 animate-pulse">
+              <div className="text-8xl">📞</div>
+              <div className="text-5xl font-bold text-green-400 uppercase tracking-widest">
+                Phone is Ringing
+              </div>
+              <div className="text-3xl text-green-300">
+                Pick up to hear your message!
+              </div>
+            </div>
+          )}
           {state === 'outro' && <span className="text-green-300">Playing message...</span>}
           {state === 'queued' && <span className="text-yellow-400">Queued (offline)</span>}
           {state === 'error' && <span className="text-red-600">Error</span>}
