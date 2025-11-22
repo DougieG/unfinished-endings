@@ -146,29 +146,16 @@ export default function RecordingStation() {
   const playClosingMessage = (): Promise<void> => {
     return new Promise(async (resolve) => {
       const audioUrl = audioConfig.current?.interior_outro || 'https://brwwqmdxaowvrxqwsvig.supabase.co/storage/v1/object/public/stories/int-post recording.mp3';
-      console.log('🎵 Playing OUTRO audio:', audioUrl);
+      console.log('🎵 Playing OUTRO audio through Phone 1 (Recording):', audioUrl);
       
       try {
-        // Try to play through Phone 1 (Recording Phone)
-        console.log('Attempting to play through Phone 1 device...');
+        // Play through Phone 1 (Recording Phone)
         await audioManager.current?.playThroughRecordingPhone(audioUrl);
-        console.log('✅ Playing through phone device');
+        // Estimate duration - adjust based on your outro length
         setTimeout(resolve, 5000);
       } catch (err) {
-        console.warn('⚠️ Phone device playback failed, falling back to browser audio:', err);
-        
-        // Fallback: play through browser audio
-        const audio = new Audio(audioUrl);
-        audio.onended = () => resolve();
-        audio.onerror = () => {
-          console.error('❌ Browser audio also failed');
-          resolve(); // Continue anyway
-        };
-        
-        audio.play().catch(playErr => {
-          console.error('❌ Audio play failed:', playErr);
-          resolve();
-        });
+        console.error('Closing message failed to play', err);
+        resolve(); // Continue anyway
       }
     });
   };
