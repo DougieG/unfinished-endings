@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     
     // Handle multipart form data (file upload)
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = (formData.get('audio') || formData.get('file')) as File;
     const configKey = formData.get('config_key') as string;
 
     if (!file || !configKey) {
@@ -130,6 +130,75 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in POST phone audio config:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/phone-audio?config_key=xxx
+ * Delete audio file and reset configuration to default
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const configKey = searchParams.get('config_key');
+
+    if (!configKey) {
+      return NextResponse.json(
+        { error: 'config_key is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getServiceSupabase();
+
+    // Get current config to find the audio file to delete
+    const { data: currentConfig } = await supabase
+      .from('phone_audio_config')
+      .select('audio_url')
+      .eq('config_key', configKey)
+      .single();
+
+    // Extract filename from URL and delete from storage if it exists
+    if (currentConfig?.audio_url) {
+      const url = new URL(currentConfig.audio_url);
+      const pathParts = url.pathname.split('/');
+      const filename = pathParts.slice(-2).join('/'); // Get 'phone-audio/filename.mp3'
+      
+      if (filename.startsWith('phone-audio/')) {
+        await supabase.storage
+          .from('stories')
+          .remove([filename]);
+      }
+    }
+
+    // Reset to empty/default state (you may want to set a default URL here)
+    const { error: updateError } = await supabase
+      .from('phone_audio_config')
+      .update({ 
+        audio_url: '',
+        updated_at: new Date().toISOString() 
+      })
+      .eq('config_key', configKey);
+
+    if (updateError) {
+      console.error('Update error:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to reset configuration' },
+        { status: 500 }
+      );
+    }
+
+    // Clear cache
+    clearAudioConfigCache();
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Error in DELETE phone audio config:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

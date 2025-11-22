@@ -55,18 +55,18 @@ export default async function AdminPage({
           </p>
         </div>
 
-        {/* Phone Audio Configuration Section */}
-        <div className="mb-12">
-          <PhoneAudioConfig />
-        </div>
-
         {/* Stories Management Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-serif text-soot mb-4">
-            Stories Management
+            Stories Archive
           </h2>
         </div>
         <AdminTable initialStories={stories || []} />
+
+        {/* Phone Audio Configuration Section */}
+        <div className="mt-12">
+          <PhoneAudioConfig />
+        </div>
       </div>
       
       {/* Progress indicators for active tasks - fixed position bottom right */}
